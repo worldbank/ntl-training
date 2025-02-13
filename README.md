@@ -2,7 +2,7 @@
 
 ## Background
 
-This material was jointly developed by the [ieConnect](https://www.worldbank.org/en/about/unit/unit-dec/impactevaluation/partnerships/ieconnect) team and [OTHER] as an introduction to using nighttime lights for economic analysis.
+This material was jointly developed by the [DECDI ieConnect](https://www.worldbank.org/en/about/unit/unit-dec/impactevaluation/partnerships/ieconnect) team and the [World Bank Data Lab](https://wbdatalab.org/) as an introduction to using nighttime lights for economic analysis.
 
 ## Course description
 
