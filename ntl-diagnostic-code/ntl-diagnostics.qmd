@@ -1,0 +1,1212 @@
+---
+title: "Nighttime Lights Analysis"
+author: "Data Lab"
+date: "9/20/2024"
+format:
+  html:
+    toc: true
+    code-fold: true
+knitr:
+  opts_chunk:
+    warning: false
+    message: false
+---
+
+```{r}
+#| code-fold: true
+
+library(tidyverse)
+library(lubridate)
+
+# REQUIRED PARAMETERS ----------------------------------------------------------
+proj_dir <- "~/Desktop/NTL Analysis" # Directory for data; code will create this folder
+iso3_code    <- "NGA"          # ISO3 code for country
+nasa_bearer <- "BEARER-TOKEN"  # NASA Bearer Token
+
+# OPTIONAL PARAMETERS ----------------------------------------------------------
+
+## Years to Query
+year_start <- 2012
+year_end <- Sys.Date() %>% year()
+
+## Months to query
+month_start <- "2012-01-01"    # Start month to query 
+month_end   <- Sys.Date() %>%  # End month to query
+  floor_date(unit = "months") %>% 
+  as.character()  
+
+# Base year for % change maps
+pc_base_year <- 2019 
+```
+
+Nighttime lights have become a commonly used resource to estimate changes in local economic activity. This document analyzes nighttime lights within the country.
+
+# Data
+
+We use nighttime lights data from [VIIRS Black Marble](https://blackmarble.gsfc.nasa.gov/). Raw nighttime lights data requires correction due to cloud cover and stray light, such as lunar light. The Black Marble dataset applies [advanced algorithms](https://www.sciencedirect.com/science/article/pii/S003442571830110X) to correct raw nighttime light values and calibrate data so that trends in lights over time can be meaningfully analyzed. From VIIRS Black Marble, we use data from January 2012 through present—where data is available at a 500-meter resolution.
+
+# Methodology
+
+Within different units of analysis (e.g, administrative units) we use the sum of nighttime lights. Where relevant, we distinguish between lights generated from gas flaring and lights removing gas flaring. We use the [World Bank's Global Gas Flaring Tracker](https://www.worldbank.org/en/programs/gasflaringreduction/global-flaring-data) which indicates the location of gas flaring locations. When removing gas flaring lights, we remove lights within 10km of a gas flaring location; when looking at lights in gas flaring locations, we take the sum of lights within 10km of gas flaring locations. 
+
+# Code Setup
+
+```{r}
+#| warning: false
+#| message: false
+
+#### Packages
+library(tidyverse)
+library(sf)
+library(leaflet)
+library(leaflet.providers)
+library(ggpubr)
+library(terra)
+library(tidyterra)
+library(gtools)
+library(readxl)
+library(janitor)
+library(geodata)
+library(exactextractr)
+library(blackmarbler)
+library(dplyr)
+library(readxl)
+library(janitor)
+library(ggpubr)
+library(WDI)
+library(kableExtra)
+library(terra)
+library(DT)
+library(countrycode)
+library(haven)
+
+## Iso2 Code
+iso2_code <- countrycode(iso3_code, origin = "iso3c", destination = "iso2c")
+
+## Filepath
+data_dir       <- file.path(proj_dir, "data")
+ntl_bm_dir     <- file.path(data_dir, "Nighttime Lights BlackMarble")
+gadm_dir       <- file.path(data_dir, "GADM")
+gas_flare_dir  <- file.path(data_dir, "gas-flaring")
+
+## Create
+dir.create(proj_dir)
+dir.create(data_dir)
+dir.create(ntl_bm_dir)
+dir.create(gadm_dir)
+dir.create(gas_flare_dir)
+
+#### Bearer
+nasa_bearer <- read_csv("~/Dropbox/bearer_bm.csv") %>%
+  pull(token)
+
+#### Theme
+theme_manual <- theme_classic2() +
+  theme(strip.background = element_blank(),
+        strip.text = element_text(face = "bold"),
+        plot.title = element_text(face = "bold"))
+
+#### GADM Boundaries
+for(i in 0:3){
+  for(iso3_i in iso3_code){
+    gadm(iso3_code, level=i, path = file.path(gadm_dir))
+  }
+} 
+
+gadm_n_files <- file.path(gadm_dir, 'gadm') %>%
+  list.files(pattern = "*.rds") %>%
+  length()
+
+if(gadm_n_files == 1) gadm_names <- c("adm0")
+if(gadm_n_files == 2) gadm_names <- c("adm0", "adm1")
+if(gadm_n_files == 3) gadm_names <- c("adm0", "adm1", "adm2")
+if(gadm_n_files == 4) gadm_names <- c("adm0", "adm1", "adm2", "adm3")
+
+#### Load GADM Functions
+load_gadm <- function(i){
+  roi_sf <- file.path(gadm_dir, 'gadm') %>%
+    list.files(full.names = T) %>%
+    str_subset(paste0("_",i,"_pk.rds")) %>%
+    map_df(function(file_path){
+      readRDS(file_path) %>%
+        st_as_sf()
+    })
+}
+
+#### Elevation
+dir.create(file.path(data_dir, "elevation"))
+
+OUT_PATH <- file.path(data_dir, "elevation", "elev.tiff")
+
+if(!file.exists(OUT_PATH)){
+  
+  if(length(iso3_code) == 1){
+    elev_r <- elevation_30s(country=iso3_code, path=tempdir())
+    
+  } else{
+    elev_list <- lapply(iso3_code, function(iso3_code_i){
+      elevation_30s(country=iso3_code_i, path=tempdir())
+    }) 
+    elev_r <- do.call(mosaic, c(elev_list, fun="mean"))
+  }
+  
+  writeRaster(elev_r, OUT_PATH)
+  
+}
+
+#### Months to Query
+ntl_months <- seq.Date(from = ymd(month_start), 
+                       to = ymd(month_end), 
+                       by = "month") %>%
+  as.character()
+
+#### Colors
+wbg_color_light <- "#1AA1DB"
+wbg_color_dark <- "#02224B"
+```
+
+# Prep Data
+
+## Download Cities
+
+We use a dataset from [Geonames](https://public.opendatasoft.com/explore/dataset/geonames-all-cities-with-a-population-1000/export/?flg=en-us&disjunctive.cou_name_en&sort=name) which indicates the location of cities with over 1,000 people. 
+
+```{r}
+#| warning: false
+#| message: false
+
+dir.create(file.path(data_dir, "cities"))
+
+## Cities
+OUT_FILE_ALL <- file.path(data_dir, "cities", "cities_all.Rds")
+
+if(!file.exists(OUT_FILE_ALL)){
+  
+  # Set the URL and destination path
+  url <- "https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_STAT_UCDB2015MT_GLOBE_R2019A/V1-2/GHS_STAT_UCDB2015MT_GLOBE_R2019A_V1_2.zip"
+  destfile <- file.path(data_dir, "cities", "GHS_STAT_UCDB2015MT_GLOBE_R2019A_V1_2.zip")
+  
+  # Download the zip file
+  download.file(url, destfile, mode = "wb")
+  
+  # Unzip the downloaded file
+  unzip(destfile, exdir = file.path(data_dir, "cities", "GHS_STAT_data"))
+  
+  # Delete unneeded files
+  unlink(destfile)
+  unlink(file.path(data_dir, "cities", "GHS_STAT_data", "GHS_STAT_UCDB2015MT_GLOBE_R2019A", "GHS_STAT_UCDB2015MT_GLOBE_R2019A_V1_0_web.pdf"))
+  unlink(file.path(data_dir, "cities", "GHS_STAT_data", "GHS_STAT_UCDB2015MT_GLOBE_R2019A", "GHS_STAT_UCDB2015MT_GLOBE_R2019A_V1_2_short.csv"))
+  unlink(file.path(data_dir, "cities", "GHS_STAT_data", "GHS_STAT_UCDB2015MT_GLOBE_R2019A", "GHS_STAT_UCDB2015MT_GLOBE_R2019A_V1_2.csv"))
+  unlink(file.path(data_dir, "cities", "GHS_STAT_data", "GHS_STAT_UCDB2015MT_GLOBE_R2019A", "GHS_STAT_UCDB2015MT_GLOBE_R2019A_V1_2.xls"))
+  
+  ## Load data
+  city_sf <- read_sf(file.path(data_dir, "cities", "GHS_STAT_data", "GHS_STAT_UCDB2015MT_GLOBE_R2019A",
+                               "GHS_STAT_UCDB2015MT_GLOBE_R2019A_V1_2.gpkg"))
+  
+  #city_p_sf <- read_sf(file.path(data_dir, "cities", "GHS_STAT_data", "GHS_STAT_UCDB2015MT_GLOBE_R2019A",
+  #                               "GHS_STAT_UCDB2015MT_GLOBE_R2019A_V1_2_short_pnt.gpkg"))
+  
+  ## Restrict to country
+  city_sf <- city_sf[city_sf$CTR_MN_ISO %in% iso3_code,]
+  
+  city_sf <- city_sf %>%
+    dplyr::select(ID_HDC_G0, CTR_MN_ISO, UC_NM_MN, P15)
+  
+  saveRDS(city_sf, OUT_FILE_ALL)
+}
+
+```
+
+
+## Download and Append gas flaring
+
+We download and append gas flaring data from the [World Bank Global Gas Flaring Database](https://datacatalog.worldbank.org/search/dataset/0037743).
+
+```{r}
+#| warning: false
+#| message: false
+
+dir.create(file.path(gas_flare_dir, "rawdata"))
+dir.create(file.path(gas_flare_dir, "finaldata"))
+
+#### Download data
+# https://datacatalog.worldbank.org/search/dataset/0037743
+if(!file.exists(file.path(gas_flare_dir, "rawdata", "viirs_global_flaring_2017.xlsx"))){
+  download.file(url = "https://datacatalogfiles.worldbank.org/ddh-published/0037743/DR0045623/viirs_global_flaring_d.7_slope_0.029353_2017_web_v1.xlsx?versionId=2023-01-18T20:03:32.2273754Z", 
+                destfile = file.path(gas_flare_dir, "rawdata", "viirs_global_flaring_2017.xlsx"), 
+                mode = "wb")
+}
+
+if(!file.exists(file.path(gas_flare_dir, "rawdata", "viirs_global_flaring_2018.xlsx"))){
+  download.file(url = "https://datacatalogfiles.worldbank.org/ddh-published/0037743/DR0045622/viirs_global_flaring_d.7_slope_0.029353_2018_web.xlsx?versionId=2023-01-18T20:02:43.3965005Z", 
+                destfile = file.path(gas_flare_dir, "rawdata", "viirs_global_flaring_2018.xlsx"), 
+                mode = "wb")
+}
+
+if(!file.exists(file.path(gas_flare_dir, "rawdata", "viirs_global_flaring_2019.xlsx"))){
+  download.file(url = "https://datacatalogfiles.worldbank.org/ddh-published/0037743/DR0045621/viirs_global_flaring_d.7_slope_0.029353_2019_web_v20201114-3.xlsx?versionId=2023-01-18T20:03:09.2456111Z", 
+                destfile = file.path(gas_flare_dir, "rawdata", "viirs_global_flaring_2019.xlsx"), 
+                mode = "wb")
+}
+
+if(!file.exists(file.path(gas_flare_dir, "rawdata", "viirs_global_flaring_2020.xlsx"))){
+  download.file(url = "https://datacatalogfiles.worldbank.org/ddh-published/0037743/DR0084248/2020%20Global%20Gas%20Flaring%20Volumes.xlsx?versionId=2023-01-18T20:03:53.8309309Z", 
+                destfile = file.path(gas_flare_dir, "rawdata", "viirs_global_flaring_2020.xlsx"), 
+                mode = "wb")
+}
+
+if(!file.exists(file.path(gas_flare_dir, "rawdata", "viirs_global_flaring_2021.xlsx"))){
+  download.file(url = "https://datacatalogfiles.worldbank.org/ddh-published/0037743/DR0087112/2021%20Global%20Gas%20Flaring%20Volumes.xlsx?versionId=2023-01-18T20:02:21.4951166Z", 
+                destfile = file.path(gas_flare_dir, "rawdata", "viirs_global_flaring_2021.xlsx"), 
+                mode = "wb")
+}
+
+#### Append data
+clean_data <- function(x){
+  x %>% 
+    clean_names() %>% 
+    dplyr::filter(iso_code %in% iso3_code)
+} 
+
+df_2021 <- read_xlsx(file.path(gas_flare_dir, "rawdata", "viirs_global_flaring_2021.xlsx"), 2) %>% clean_data()
+
+df_2020_1 <- read_xlsx(file.path(gas_flare_dir, "rawdata", "viirs_global_flaring_2020.xlsx"), 1) %>% clean_data()
+df_2020_2 <- read_xlsx(file.path(gas_flare_dir, "rawdata", "viirs_global_flaring_2020.xlsx"), 2) %>% clean_data()
+df_2020_3 <- read_xlsx(file.path(gas_flare_dir, "rawdata", "viirs_global_flaring_2020.xlsx"), 3) %>% clean_data()
+
+df_2019 <- read_xlsx(file.path(gas_flare_dir, "rawdata", "viirs_global_flaring_2019.xlsx"), 1) %>% clean_data()
+
+df_2018_4 <- read_xlsx(file.path(gas_flare_dir, "rawdata", "viirs_global_flaring_2018.xlsx"), 4) %>% clean_data()
+df_2018_5 <- read_xlsx(file.path(gas_flare_dir, "rawdata", "viirs_global_flaring_2018.xlsx"), 5) %>% clean_data()
+df_2018_6 <- read_xlsx(file.path(gas_flare_dir, "rawdata", "viirs_global_flaring_2018.xlsx"), 6) %>% clean_data()
+
+df_2017_1 <- read_xlsx(file.path(gas_flare_dir, "rawdata", "viirs_global_flaring_2017.xlsx"), 1) %>% clean_data()
+df_2017_2 <- read_xlsx(file.path(gas_flare_dir, "rawdata", "viirs_global_flaring_2017.xlsx"), 2) %>% clean_data()
+df_2017_3 <- read_xlsx(file.path(gas_flare_dir, "rawdata", "viirs_global_flaring_2017.xlsx"), 3) %>% clean_data()
+
+gs_df <- bind_rows(
+  df_2021,
+  df_2020_1,
+  df_2020_2,
+  df_2020_3,
+  df_2019,
+  df_2018_4,
+  df_2018_5,
+  df_2018_6,
+  df_2017_1,
+  df_2017_2,
+  df_2017_3
+)
+
+if(nrow(gs_df) > 0){
+  gs_df <- gs_df %>%
+    dplyr::select(latitude, longitude) %>%
+    distinct() %>%
+    dplyr::mutate(uid = 1:n())
+  
+  gs_sf <- gs_df %>% 
+    st_as_sf(coords = c("longitude", "latitude"),
+             crs = 4326)
+  
+  gs_5km_sf <- gs_sf %>%
+    st_buffer(dist = 5000)
+  
+  gs_10km_sf <- gs_sf %>%
+    st_buffer(dist = 10000)
+  
+} else{
+  
+  gs_df <- data.frame(NULL)
+  gs_5km_sf <- data.frame(NULL)
+  gs_10km_sf <- data.frame(NULL)
+  
+}
+
+saveRDS(gs_df, file.path(gas_flare_dir, "finaldata", "gas_flare_locations.Rds"))
+saveRDS(gs_5km_sf, file.path(gas_flare_dir, "finaldata", "gas_flare_locations_5km.Rds"))
+saveRDS(gs_10km_sf, file.path(gas_flare_dir, "finaldata", "gas_flare_locations_10km.Rds"))
+```
+
+## Download Nighttime Lights
+
+```{r}
+#| warning: false
+#| message: false
+
+#### NTL
+roi_sf <- load_gadm(0)
+
+dir.create(file.path(ntl_bm_dir, "rasters"))
+dir.create(file.path(ntl_bm_dir, "rasters", "annual"))
+dir.create(file.path(ntl_bm_dir, "rasters", "monthly"))
+dir.create(file.path(ntl_bm_dir, "rasters", "daily"))
+
+r <- bm_raster(roi_sf = roi_sf,
+               product_id = "VNP46A4",
+               date = year_start:year_end,
+               bearer = nasa_bearer,
+               output_location_type = "file",
+               file_dir = file.path(ntl_bm_dir, "rasters", "annual"))
+
+r <- bm_raster(roi_sf = roi_sf,
+               product_id = "VNP46A3",
+               date = ntl_months,
+               bearer = nasa_bearer,
+               output_location_type = "file",
+               file_dir = file.path(ntl_bm_dir, "rasters", "monthly"))
+```
+
+## Aggregate Nighttime Lights
+```{r}
+#| warning: false
+#| message: false
+
+# Individual Files -------------------------------------------------------------
+dir.create(file.path(ntl_bm_dir, "aggregated_individual_files"))
+
+#### Setup loops
+for(unit in c(gadm_names,
+              "cities")){
+  for(time_type in c("annual", "monthly")){
+    
+    if(time_type == "annual"){
+      time_vec <- year_start:year_end
+    }
+    
+    if(time_type == "monthly"){
+      time_vec <- ntl_months
+    }
+    
+    for(time_i in time_vec){
+      
+      #### Only process if file doesn't exist
+      dir.create(file.path(ntl_bm_dir, "aggregated_individual_files", unit))
+      dir.create(file.path(ntl_bm_dir, "aggregated_individual_files", unit, time_type))
+      
+      OUT_FILE <- file.path(ntl_bm_dir, "aggregated_individual_files", unit, time_type, 
+                            paste0("ntl_", time_i, ".Rds"))
+      
+      if(!file.exists(OUT_FILE)){
+        
+        #### Load Unit
+        if(unit == "adm0"){
+          roi_sf <- load_gadm(0)
+        }
+        
+        if(unit == "adm1"){
+          roi_sf <- load_gadm(1)
+        }
+        
+        if(unit == "adm2"){
+          roi_sf <- load_gadm(2)
+        }
+        
+        if(unit == "adm3"){
+          roi_sf <- load_gadm(3)
+        }
+        
+        if(unit == "cities"){
+          roi_sf <- readRDS(file.path(data_dir, "cities", "cities_all.Rds"))
+        }
+        
+        #### Load Raster
+        if(time_type == "annual"){
+          bm_product <- "VNP46A4"
+          time_raster_i <- time_i 
+        }
+        
+        if(time_type == "monthly"){
+          bm_product <- "VNP46A3"
+          
+          time_raster_i <- time_i %>% 
+            substring(1, 7) %>%
+            str_replace_all("-", "_")
+        }
+        
+        r_path <- file.path(ntl_bm_dir, "rasters", time_type, 
+                            paste0(bm_product,"_NearNadir_Composite_Snow_Free_qflag_t",time_raster_i,".tif"))
+        
+        if(file.exists(r_path)){
+          
+          ntl_r <- rast(r_path)
+          
+          #### Gas Flaring Mask
+          gs_5km_sf  <- readRDS(file.path(gas_flare_dir, "finaldata", "gas_flare_locations_5km.Rds"))
+          gs_10km_sf <- readRDS(file.path(gas_flare_dir, "finaldata", "gas_flare_locations_10km.Rds"))
+          
+          if(nrow(gs_5km_sf) > 0){
+            ntl_gf_5km_r   <- mask(ntl_r, gs_5km_sf)
+            ntl_nogf_5km_r <- mask(ntl_r, gs_5km_sf, inverse = T)
+            
+            ntl_gf_10km_r   <- mask(ntl_r, gs_10km_sf)
+            ntl_nogf_10km_r <- mask(ntl_r, gs_10km_sf, inverse = T)
+          }
+          
+          #### Extract NTL
+          roi_sf$ntl_sum          <- exact_extract(ntl_r, roi_sf, "sum", progress = F)
+          
+          if(nrow(gs_5km_sf) > 0){
+            roi_sf$ntl_gf_5km_sum   <- exact_extract(ntl_gf_5km_r, roi_sf, "sum", progress = F)
+            roi_sf$ntl_nogf_5km_sum <- exact_extract(ntl_nogf_5km_r, roi_sf, "sum", progress = F)
+            
+            roi_sf$ntl_gf_10km_sum   <- exact_extract(ntl_gf_10km_r, roi_sf, "sum", progress = F)
+            roi_sf$ntl_nogf_10km_sum <- exact_extract(ntl_nogf_10km_r, roi_sf, "sum", progress = F)
+          } else{
+            roi_sf$ntl_gf_5km_sum   <- 0
+            roi_sf$ntl_nogf_5km_sum <- roi_sf$ntl_sum
+            
+            roi_sf$ntl_gf_10km_sum   <- 0
+            roi_sf$ntl_nogf_10km_sum <- roi_sf$ntl_sum
+          }
+          
+          #### Cleanup
+          roi_sf$date <- time_i
+          
+          roi_df <- roi_sf %>%
+            st_drop_geometry()
+          
+          #### Export
+          saveRDS(roi_df, OUT_FILE)
+          
+        }
+      }
+    }
+  }
+}
+
+#### Append Files
+dir.create(file.path(ntl_bm_dir, "aggregated"))
+
+for(unit in c(gadm_names,
+              "cities")){
+  for(time_type in c("annual", "monthly")){
+    
+    ntl_df <- file.path(ntl_bm_dir, "aggregated_individual_files", unit, time_type) %>%
+      list.files(full.names = T,
+                 pattern = ".Rds") %>%
+      map_df(readRDS)
+    
+    saveRDS(ntl_df,   file.path(ntl_bm_dir, "aggregated", paste0("ntl_", unit, "_", time_type, ".Rds")))
+    write_csv(ntl_df, file.path(ntl_bm_dir, "aggregated", paste0("ntl_", unit, "_", time_type, ".csv")))
+    write_dta(ntl_df, file.path(ntl_bm_dir, "aggregated", paste0("ntl_", unit, "_", time_type, ".dta")))
+    
+  }
+}
+
+```
+
+# Maps of Nighttime Lights
+
+## Interactive Map
+
+```{r}
+
+#| warning: false
+#| message: false
+
+## Load boundaries
+adm0_sf <- load_gadm(0)
+
+## Load/prep raster
+prep_r <- function(year_i){
+  r <- rast(file.path(ntl_bm_dir, "rasters", "annual",
+                      paste0("VNP46A4_NearNadir_Composite_Snow_Free_qflag_t",year_i,".tif")))
+  r <- r %>% mask(adm0_sf)
+  r[][r[] == 0] <- NA
+  #r[] <- log(r[] + 1)
+  r[] <- log(r[] + 1)
+  return(r)
+}
+
+r_2012 <- prep_r(2012)
+r_2013 <- prep_r(2013)
+r_2014 <- prep_r(2014)
+r_2015 <- prep_r(2015)
+r_2016 <- prep_r(2016)
+r_2017 <- prep_r(2017)
+r_2018 <- prep_r(2018)
+r_2019 <- prep_r(2019)
+r_2020 <- prep_r(2020)
+r_2021 <- prep_r(2021)
+r_2022 <- prep_r(2022)
+r_2023 <- prep_r(2023)
+
+## Make map
+pal <- colorNumeric(c("yellow", "orange", "red"), unique(c(r_2012[],
+                                                           r_2013[],
+                                                           r_2014[],
+                                                           r_2015[],
+                                                           r_2016[],
+                                                           r_2017[],
+                                                           r_2018[],
+                                                           r_2019[],
+                                                           r_2020[],
+                                                           r_2021[],
+                                                           r_2022[],
+                                                           r_2023[])),
+                    na.color = "transparent")
+
+leaflet() %>%
+  addProviderTiles(providers$CartoDB.DarkMatter) %>%
+  addRasterImage(r_2012, colors = pal, opacity = 1, group = "2012") %>%
+  addRasterImage(r_2013, colors = pal, opacity = 1, group = "2013") %>%
+  addRasterImage(r_2014, colors = pal, opacity = 1, group = "2014") %>%
+  addRasterImage(r_2015, colors = pal, opacity = 1, group = "2015") %>%
+  addRasterImage(r_2016, colors = pal, opacity = 1, group = "2016") %>%
+  addRasterImage(r_2017, colors = pal, opacity = 1, group = "2017") %>%
+  addRasterImage(r_2018, colors = pal, opacity = 1, group = "2018") %>%
+  addRasterImage(r_2019, colors = pal, opacity = 1, group = "2019") %>%
+  addRasterImage(r_2020, colors = pal, opacity = 1, group = "2020") %>%
+  addRasterImage(r_2021, colors = pal, opacity = 1, group = "2021") %>%
+  addRasterImage(r_2022, colors = pal, opacity = 1, group = "2022") %>%
+  addRasterImage(r_2023, colors = pal, opacity = 1, group = "2023") %>%
+  addLayersControl(
+    baseGroups = paste0(2012:2023),
+    options = layersControlOptions(collapsed=FALSE)
+  )
+```
+
+
+## Static Map of Nighttime Lights
+
+```{r}
+#| warning: false
+#| message: false
+
+## Load boundaries
+adm0_sf <- load_gadm(0)
+
+## Elevation
+elev_r <- rast(file.path(data_dir, "elevation", "elev.tiff"))
+elev_r <- elev_r %>% crop(adm0_sf) %>% mask(adm0_sf)
+
+## Latest Year
+r <- rast(file.path(ntl_bm_dir, "rasters", "annual",
+                    paste0("VNP46A4_NearNadir_Composite_Snow_Free_qflag_t",2023,".tif")))
+r <- r %>% crop(adm0_sf) %>% mask(adm0_sf)
+r[] <- log(r[] + 1)
+
+library(ggnewscale)
+
+r[][r[] <= 1] <- NA
+ggplot() +
+  geom_spatraster(data = elev_r, show.legend = FALSE) +
+  scale_fill_gradient(low = "#49232E",
+                      high = "black",
+                      na.value = "transparent") +
+  ggnewscale::new_scale_fill() +
+  geom_spatraster(data = r,
+                  aes(fill = t2023)) +
+  scale_fill_distiller(palette = "YlGnBl",
+                       #midpoint = 2,
+                       na.value = "transparent") +
+  labs(title = "Nighttime Lights: 2023") +
+  coord_sf() +
+  theme_void() +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5),
+        legend.position = "none")
+```
+# Diagnostics
+
+## Nighttime Lights: Gas Flaring vs Non Gas Flaring
+
+### Trend Figure
+```{r}
+#| warning: false
+#| message: false
+
+ntl_df <- readRDS(file.path(ntl_bm_dir, "aggregated", "ntl_adm0_annual.Rds"))
+
+if("ntl_nogf_10km_sum" %in% names(ntl_df)){
+  
+  ntl_df %>%
+    dplyr::select(date, ntl_gf_10km_sum, ntl_nogf_10km_sum) %>%
+    pivot_longer(cols = -date) %>%
+    dplyr::mutate(name = case_when(
+      name == "ntl_nogf_10km_sum" ~ "NTL: No Gas Flares",
+      name == "ntl_gf_10km_sum" ~ "NTL: Gas Flares"
+    )) %>%
+    
+    ggplot() +
+    geom_col(aes(x = date,
+                 y = value,
+                 fill = name),
+             stat = "identity", position = 'dodge') +
+    labs(fill = NULL,
+         x = NULL,
+         y = "NTL") +
+    scale_fill_manual(values = c(wbg_color_light,
+                                 wbg_color_dark)) +
+    theme_manual
+} else{
+  cat("No gas flaring in the country")
+}
+```
+
+### Percent of NTL from Gas Flaring
+```{r}
+#| warning: false
+#| message: false
+
+if("ntl_nogf_10km_sum" %in% names(ntl_df)){
+  ntl_df <- readRDS(file.path(ntl_bm_dir, "aggregated", "ntl_adm0_annual.Rds"))
+  
+  ntl_df %>%
+    dplyr::mutate(per_gf = (ntl_gf_10km_sum / ntl_sum) * 100) %>%
+    dplyr::select(date, COUNTRY, per_gf) %>%
+    pivot_wider(id_cols = date,
+                names_from = COUNTRY,
+                values_from = per_gf) %>%
+    dplyr::rename(Year = date) %>%
+    kable()
+  
+}
+```
+
+## NTL vs City Population
+
+We use a dataset from [GHSL](https://data.jrc.ec.europa.eu/dataset/53473144-b88c-44bc-b4a3-4583ed1f547e) that maps the locations of all cities. We extract total nighttime lights each city. The below figure compares nighttime lights with population. 
+
+```{r}
+ntl_df <- readRDS(file.path(ntl_bm_dir, "aggregated", 
+                            paste0("ntl_", "cities", "_", "annual", ".Rds")))
+
+
+ntl_df %>%
+  dplyr::filter(P15 > 0,
+                date == 2015) %>%
+  ggplot(aes(x = log(ntl_sum),
+             y = log(P15))) +
+  geom_point(fill = wbg_color_dark) +
+  geom_smooth(method=lm, 
+              se=FALSE,
+              color = wbg_color_light) +
+  stat_cor() +
+  theme_minimal() +
+  labs(x = "NTL, Logged",
+       y = "Population, Logged")
+```
+
+
+## Nighttime Lights as Proxy for GDP
+```{r}
+# Download GDP
+dir.create(file.path(data_dir, "wdi"))
+OUT_FILE <- file.path(data_dir, "wdi", "gdp.Rds")
+
+if(!file.exists(OUT_FILE)){
+  gdp_df <- WDI(indicator = c("NY.GDP.PCAP.CD",
+                              "NY.GDP.MKTP.CD"), 
+                country = iso3_code, 
+                start = 2012, 
+                end = 2023)
+  
+  saveRDS(gdp_df, OUT_FILE)
+} else{
+  gdp_df <- readRDS(OUT_FILE)
+}
+
+# Correlation with GDP
+ntl_df <- readRDS(file.path(ntl_bm_dir, "aggregated", 
+                            paste0("ntl_", "adm0", "_", "annual", ".Rds")))
+
+ntl_df <- ntl_df %>%
+  dplyr::rename(year = date)
+
+# Filter
+if(paste(iso3_code, collapse = ";") %in% "SSD;SDN"){
+  ntl_df <- ntl_df[ntl_df$COUNTRY %in% "Sudan",]
+  gdp_df <- gdp_df[gdp_df$country %in% "Sudan",]
+}
+
+ntl_gdp_df <- ntl_df %>%
+  left_join(gdp_df, by = "year") %>%
+  clean_names()
+
+## Line Plots
+ntl_gdp_df[,names(ntl_gdp_df) %in% 
+             c("year", 
+               "ntl_sum",
+               "ntl_gf_10km_sum",
+               "ntl_nogf_10km_sum",
+               #"ny_gdp_pcap_cd",
+               "ny_gdp_mktp_cd")] %>%
+  pivot_longer(cols = -year) %>%
+  dplyr::mutate(name = case_when(
+    name == "ntl_sum" ~ "Nighttime Lights",
+    name == "ntl_gf_10km_sum" ~ "Nighttime Lights:\nGas Flares",
+    name == "ntl_nogf_10km_sum" ~ "Nighttime Lights:\nNo Gas Flares",
+    name == "ny_gdp_pcap_cd" ~ "GDP, Per Capita",
+    name == "ny_gdp_mktp_cd" ~ "GDP"
+  )) %>%
+  dplyr::mutate(type = name %>% str_detect("GDP")) %>%
+  ggplot(aes(x = year,
+             y = value,
+             color = type)) +
+  geom_line(linewidth = 1) +
+  facet_wrap(~name,
+             scales = "free_y") +
+  labs(x = NULL,
+       y = NULL) +
+  scale_color_manual(values = c(wbg_color_light, wbg_color_dark)) +
+  theme_manual +
+  theme(legend.position = "none")
+
+## Correlation: GDP
+ntl_gdp_df[,names(ntl_gdp_df) %in% 
+             c("ntl_sum", 
+               "ntl_gf_10km_sum",
+               "ntl_nogf_10km_sum",
+               "ny_gdp_mktp_cd")] %>%
+  pivot_longer(cols = -c(ny_gdp_mktp_cd)) %>%
+  dplyr::mutate(name = case_when(
+    name == "ntl_sum" ~ "NTL",
+    name == "ntl_gf_10km_sum" ~ "NTL: Gas Flare",
+    name == "ntl_nogf_10km_sum" ~ "NTL: No Gas Flare",
+  )) %>%
+  
+  ggplot(aes(x = value,
+             y = ny_gdp_mktp_cd)) +
+  geom_point() +
+  geom_smooth(method=lm, 
+              se=FALSE,
+              color = wbg_color_light) +
+  stat_cor() +
+  labs(x = "NTL",
+       y = "GDP",
+       title = "Correlation of Nighttime Lights with GDP") +
+  facet_wrap(~name,
+             scales = "free") +
+  theme_manual 
+
+## Correlation: GDP
+# ntl_gdp_df %>%
+#   dplyr::select(ntl_sum, 
+#                 ntl_gf_10km_sum,
+#                 ntl_nogf_10km_sum,
+#                 ny_gdp_pcap_cd) %>%
+#   pivot_longer(cols = -c(ny_gdp_pcap_cd)) %>%
+#   dplyr::mutate(name = case_when(
+#     name == "ntl_sum" ~ "NTL",
+#     name == "ntl_gf_10km_sum" ~ "NTL: Gas Flare",
+#     name == "ntl_nogf_10km_sum" ~ "NTL: No Gas Flare",
+#   )) %>%
+#   
+#   ggplot(aes(x = value,
+#              y = ny_gdp_pcap_cd)) +
+#   geom_point() +
+#   geom_smooth(method=lm, 
+#               se=FALSE,
+#               color = wbg_color_light) +
+#   stat_cor() +
+#   labs(x = "NTL",
+#        y = "GDP, per Capita",
+#        title = "Correlation of Nighttime Lights with per Capita GDP") +
+#   facet_wrap(~name,
+#              scales = "free") +
+#   theme_manual
+```
+
+
+# Trends in Nighttime Lights
+
+## Country Level
+```{r}
+if("adm0" %in% gadm_names){
+  
+  ntl_df <- readRDS(file.path(ntl_bm_dir, "aggregated", 
+                              paste0("ntl_", "adm0", "_", "annual", ".Rds")))
+  
+  ntl_df %>%
+    ggplot() +
+    geom_col(aes(x = date, y = ntl_sum),
+             fill = wbg_color_light) +
+    facet_wrap(~COUNTRY) +
+    labs(x = NULL,
+         y = "Nighttime Lights") +
+    theme_manual
+  
+} else{
+  cat("Country level polygon does not exist in GADM")
+}
+```
+
+```{r}
+if("adm0" %in% gadm_names){
+  ntl_df <- readRDS(file.path(ntl_bm_dir, "aggregated", 
+                              paste0("ntl_", "adm0", "_", "annual", ".Rds")))
+  
+  ntl_df %>%
+    dplyr::select(date, COUNTRY, ntl_gf_10km_sum, ntl_nogf_10km_sum) %>%
+    pivot_longer(cols = -c(date, COUNTRY)) %>%
+    dplyr::mutate(name = case_when(
+      name == "ntl_gf_10km_sum" ~ "NTL: Gas Flares",
+      name == "ntl_nogf_10km_sum" ~ "NTL: No Gas Flares"
+    )) %>%
+    ggplot() +
+    geom_line(aes(x = date,
+                  y = value,
+                  color = name),
+              linewidth = 1) +
+    labs(color = NULL,
+         x = NULL,
+         y = "NTL") +
+    facet_wrap(~COUNTRY) +
+    scale_color_manual(values = c(wbg_color_light,
+                                  wbg_color_dark)) +
+    theme_manual +
+    theme(legend.position = "top")
+}
+```
+
+```{r}
+if("adm0" %in% gadm_names){
+  ntl_df <- readRDS(file.path(ntl_bm_dir, "aggregated", 
+                              paste0("ntl_", "adm0", "_", "monthly", ".Rds")))
+  
+  ntl_df %>%
+    dplyr::mutate(date = date %>% ymd()) %>%
+    ggplot() +
+    geom_col(aes(x = date, y = ntl_sum),
+             fill = wbg_color_light) +
+    facet_wrap(~COUNTRY) +
+    labs(x = NULL,
+         y = "Nighttime Lights") +
+    theme_manual
+}
+```
+
+## ADM 1: Top ADM Units
+```{r}
+if("adm1" %in% gadm_names){
+  ntl_df <- readRDS(file.path(ntl_bm_dir, "aggregated", 
+                              paste0("ntl_", "adm1", "_", "annual", ".Rds")))
+  
+  top_adm <- ntl_df %>%
+    dplyr::filter(date == max(date)) %>%
+    arrange(-ntl_sum) %>%
+    pull(NAME_1) %>%
+    head(12)
+  
+  ntl_df %>%
+    filter(NAME_1 %in% top_adm) %>%
+    ggplot() +
+    geom_col(aes(x = date, y = ntl_sum),
+             fill = wbg_color_light) +
+    facet_wrap(~NAME_1) +
+    labs(x = NULL,
+         y = "Nighttime Lights") +
+    theme_manual 
+} else{
+  cat("ADM1 GADM file does not exist")
+}
+```
+
+```{r}
+if("adm1" %in% gadm_names){
+  ntl_df <- readRDS(file.path(ntl_bm_dir, "aggregated", 
+                              paste0("ntl_", "adm1", "_", "annual", ".Rds")))
+  
+  ntl_df %>%
+    dplyr::select(date, NAME_1, ntl_gf_10km_sum, ntl_nogf_10km_sum) %>%
+    pivot_longer(cols = -c(date, NAME_1)) %>%
+    dplyr::mutate(name = case_when(
+      name == "ntl_gf_10km_sum" ~ "NTL: Gas Flares",
+      name == "ntl_nogf_10km_sum" ~ "NTL: No Gas Flares"
+    )) %>%
+    filter(NAME_1 %in% top_adm) %>%
+    ggplot() +
+    geom_line(aes(x = date,
+                  y = value,
+                  color = name),
+              linewidth = 1) +
+    labs(color = NULL,
+         x = NULL,
+         y = "NTL") +
+    facet_wrap(~NAME_1) +
+    scale_color_manual(values = c(wbg_color_light,
+                                  wbg_color_dark)) +
+    theme_manual +
+    theme(legend.position = "top")
+}
+```
+
+```{r}
+if("adm1" %in% gadm_names){
+  ntl_df <- readRDS(file.path(ntl_bm_dir, "aggregated", 
+                              paste0("ntl_", "adm1", "_", "monthly", ".Rds")))
+  
+  ntl_df %>%
+    dplyr::mutate(date = date %>% ymd()) %>%
+    filter(NAME_1 %in% top_adm) %>%
+    ggplot() +
+    geom_col(aes(x = date, y = ntl_sum),
+             fill = wbg_color_light) +
+    facet_wrap(~NAME_1) +
+    labs(x = NULL,
+         y = "Nighttime Lights") +
+    theme_manual 
+}
+```
+
+## ADM 2: Top ADM Units
+```{r}
+if("adm2" %in% gadm_names){
+  ntl_df <- readRDS(file.path(ntl_bm_dir, "aggregated", 
+                              paste0("ntl_", "adm2", "_", "annual", ".Rds")))
+  
+  top_adm <- ntl_df %>%
+    dplyr::filter(date == max(date)) %>%
+    arrange(-ntl_sum) %>%
+    pull(NAME_2) %>%
+    head(12)
+  
+  ntl_df %>%
+    filter(NAME_2 %in% top_adm) %>%
+    ggplot() +
+    geom_col(aes(x = date, y = ntl_sum),
+             fill = wbg_color_light) +
+    facet_wrap(~NAME_2) +
+    labs(x = NULL,
+         y = "Nighttime Lights") +
+    theme_manual
+} else{
+  cat("ADM2 GADM polygon does not exist")
+}
+```
+
+```{r}
+if("adm2" %in% gadm_names){
+  ntl_df <- readRDS(file.path(ntl_bm_dir, "aggregated", 
+                              paste0("ntl_", "adm2", "_", "annual", ".Rds")))
+  
+  ntl_df %>%
+    dplyr::select(date, NAME_2, ntl_gf_10km_sum, ntl_nogf_10km_sum) %>%
+    pivot_longer(cols = -c(date, NAME_2)) %>%
+    dplyr::mutate(name = case_when(
+      name == "ntl_gf_10km_sum" ~ "NTL: Gas Flares",
+      name == "ntl_nogf_10km_sum" ~ "NTL: No Gas Flares"
+    )) %>%
+    filter(NAME_2 %in% top_adm) %>%
+    ggplot() +
+    geom_line(aes(x = date,
+                  y = value,
+                  color = name),
+              linewidth = 1) +
+    labs(color = NULL,
+         x = NULL,
+         y = "NTL") +
+    facet_wrap(~NAME_2) +
+    scale_color_manual(values = c(wbg_color_light,
+                                  wbg_color_dark)) +
+    theme_manual +
+    theme(legend.position = "top")
+}
+```
+
+```{r}
+if("adm2" %in% gadm_names){
+  ntl_df <- readRDS(file.path(ntl_bm_dir, "aggregated", 
+                              paste0("ntl_", "adm2", "_", "monthly", ".Rds")))
+  
+  ntl_df %>%
+    dplyr::filter(date >= ymd("2020-01-01")) %>%
+    dplyr::mutate(date = ymd(date)) %>%
+    filter(NAME_2 %in% top_adm) %>%
+    ggplot() +
+    geom_col(aes(x = date, y = ntl_sum),
+             fill = wbg_color_light) +
+    facet_wrap(~NAME_2) +
+    labs(x = NULL,
+         y = "Nighttime Lights") +
+    theme_manual 
+}
+```
+
+## Top Cities
+```{r}
+ntl_df <- readRDS(file.path(ntl_bm_dir, "aggregated", 
+                            paste0("ntl_", "cities", "_", "annual", ".Rds")))
+
+top_adm <- ntl_df %>%
+  dplyr::filter(date == max(date)) %>%
+  arrange(-ntl_sum) %>%
+  pull(ID_HDC_G0) %>%
+  head(12)
+
+ntl_df %>%
+  filter(ID_HDC_G0 %in% top_adm) %>%
+  ggplot() +
+  geom_col(aes(x = date, y = ntl_sum),
+           fill = wbg_color_light) +
+  facet_wrap(~UC_NM_MN) +
+  labs(x = NULL,
+       y = "Nighttime Lights") +
+  theme_manual
+```
+
+```{r}
+ntl_df <- readRDS(file.path(ntl_bm_dir, "aggregated", 
+                            paste0("ntl_", "cities", "_", "annual", ".Rds")))
+
+ntl_df %>%
+  dplyr::rename(city_name = UC_NM_MN) %>%
+  dplyr::select(date, city_name, ID_HDC_G0, ntl_gf_10km_sum, ntl_nogf_10km_sum) %>%
+  pivot_longer(cols = -c(date, city_name, ID_HDC_G0)) %>%
+  dplyr::mutate(name = case_when(
+    name == "ntl_gf_10km_sum" ~ "NTL: Gas Flares",
+    name == "ntl_nogf_10km_sum" ~ "NTL: No Gas Flares"
+  )) %>%
+  dplyr::filter(ID_HDC_G0 %in% top_adm) %>%
+  ggplot() +
+  geom_line(aes(x = date,
+                y = value,
+                color = name),
+            size = 1) +
+  labs(color = NULL,
+       x = NULL,
+       y = "NTL") +
+  facet_wrap(~city_name) +
+  scale_color_manual(values = c(wbg_color_light,
+                                wbg_color_dark)) +
+  theme_manual +
+  theme(legend.position = "top")
+```
+
+```{r}
+ntl_df <- readRDS(file.path(ntl_bm_dir, "aggregated", 
+                            paste0("ntl_", "cities", "_", "monthly", ".Rds")))
+
+ntl_df %>%
+  dplyr::mutate(date = date %>% ymd()) %>%
+  filter(ID_HDC_G0 %in% top_adm) %>%
+  ggplot() +
+  geom_col(aes(x = date, y = ntl_sum),
+           fill = wbg_color_light) +
+  facet_wrap(~UC_NM_MN) +
+  labs(x = NULL,
+       y = "Nighttime Lights") +
+  theme_manual 
+```
+
+# % Change Maps
+
+## ADM 1
+```{r}
+
+if("adm1" %in% gadm_names){
+  
+  ## Load
+  adm_sf <- load_gadm(1)
+  ntl_df <- readRDS(file.path(ntl_bm_dir, "aggregated", "ntl_adm1_annual.Rds"))
+  
+  ## Prep data
+  ntl_wide_df <- ntl_df %>%
+    dplyr::filter(date %in% c(pc_base_year:2023)) %>%
+    dplyr::select(GID_1, date, ntl_sum) %>%
+    dplyr::mutate(date = paste0("yr", date)) %>%
+    pivot_wider(names_from = date,
+                values_from = ntl_sum,
+                id_cols = GID_1)
+  
+  ntl_wide_df$base_year <- ntl_wide_df[[paste0("yr", pc_base_year)]]
+  
+  ntl_wide_df <- ntl_wide_df %>%
+    dplyr::mutate(pc20 = (yr2020 - base_year)/base_year * 100,
+                  pc21 = (yr2021 - base_year)/base_year * 100,
+                  pc22 = (yr2022 - base_year)/base_year * 100,
+                  pc23 = (yr2023 - base_year)/base_year * 100)
+  
+  ## Map
+  adm_data_sf <- adm_sf %>%
+    left_join(ntl_wide_df, by = "GID_1") %>%
+    pivot_longer(cols = c(pc20, pc21, pc22, pc23)) %>%
+    dplyr::mutate(name = case_when(
+      name == "pc20" ~ paste0("% Change: ",pc_base_year," to 2020"),
+      name == "pc21" ~ paste0("% Change: ",pc_base_year," to 2021"),
+      name == "pc22" ~ paste0("% Change: ",pc_base_year," to 2022"),
+      name == "pc23" ~ paste0("% Change: ",pc_base_year," to 2023")
+    ))
+  
+  adm_data_sf$value[adm_data_sf$value >= 100] <- 100
+  adm_data_sf$value[adm_data_sf$value <= -100] <- -100
+  
+  ggplot() +
+    geom_sf(data = adm_data_sf,
+            aes(fill = value)) +
+    facet_wrap(~name) +
+    labs(fill = "% Change") +
+    scale_fill_gradient2(low = "red",
+                         mid = "white",
+                         high = "forestgreen",
+                         midpoint = 0,
+                         limits = c(-100, 100),
+                         breaks = c(-100, -50, 0, 50, 100),
+                         labels = c("< -100", "-50", "0", "50", "> 100")) +
+    theme_manual +
+    theme_void() +
+    theme(strip.text = element_text(face = "bold"))
+  
+} else{
+  cat("ADM1 GADM polygon does not exist")
+}
+```
+
+## ADM 2
+```{r}
+if("adm2" %in% gadm_names){
+  ## Load
+  adm_sf <- load_gadm(2)
+  ntl_df <- readRDS(file.path(ntl_bm_dir, "aggregated", "ntl_adm2_annual.Rds"))
+  
+  ## Prep data
+  ntl_wide_df <- ntl_df %>%
+    dplyr::filter(date %in% c(pc_base_year:2023)) %>%
+    dplyr::select(GID_2, date, ntl_sum) %>%
+    dplyr::mutate(date = paste0("yr", date)) %>%
+    pivot_wider(names_from = date,
+                values_from = ntl_sum,
+                id_cols = GID_2)
+  
+  ntl_wide_df$base_year <- ntl_wide_df[[paste0("yr", pc_base_year)]]
+  
+  ntl_wide_df <- ntl_wide_df %>%
+    dplyr::mutate(pc20 = (yr2020 - base_year)/base_year * 100,
+                  pc21 = (yr2021 - base_year)/base_year * 100,
+                  pc22 = (yr2022 - base_year)/base_year * 100,
+                  pc23 = (yr2023 - base_year)/base_year * 100)
+  
+  ## Map
+  adm_data_sf <- adm_sf %>%
+    left_join(ntl_wide_df, by = "GID_2") %>%
+    pivot_longer(cols = c(pc20, pc21, pc22, pc23)) %>%
+    dplyr::mutate(name = case_when(
+      name == "pc20" ~ paste0("% Change: ",pc_base_year," to 2020"),
+      name == "pc21" ~ paste0("% Change: ",pc_base_year," to 2021"),
+      name == "pc22" ~ paste0("% Change: ",pc_base_year," to 2022"),
+      name == "pc23" ~ paste0("% Change: ",pc_base_year," to 2023")
+    ))
+  
+  adm_data_sf$value[adm_data_sf$value >= 100] <- 100
+  adm_data_sf$value[adm_data_sf$value <= -100] <- -100
+  
+  ggplot() +
+    geom_sf(data = adm_data_sf,
+            aes(fill = value)) +
+    facet_wrap(~name) +
+    labs(fill = "% Change") +
+    scale_fill_gradient2(low = "red",
+                         mid = "white",
+                         high = "forestgreen",
+                         midpoint = 0,
+                         limits = c(-100, 100),
+                         breaks = c(-100, -50, 0, 50, 100),
+                         labels = c("< -100", "-50", "0", "50", "> 100")) +
+    theme_manual +
+    theme_void() +
+    theme(strip.text = element_text(face = "bold"))
+} else{
+  cat("ADM2 GADM polygon does not exist")
+}
+```
+

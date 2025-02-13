@@ -1,0 +1,1489 @@
+---
+title: "Introduction to Spatial Analysis in R"
+author: "ieConnect"
+date: "10/07/2024"
+format:
+  html:
+    toc: true
+    code-fold: false
+    code-link: true
+knitr:
+  opts_chunk:
+    warning: false
+    message: false
+editor_options: 
+  chunk_output_type: inline
+---
+
+_The hidden code chunk below downloads the data for this tutorial._
+```{r}
+#| code-fold: true
+
+# Download data
+
+## Load packages
+library(tidyverse)
+library(here)
+library(sf)
+library(terra)
+library(geodata)
+library(osmdata)
+library(leaflet)
+
+## Kenya
+COUNTRY_OUT <- here("data", "kenya_adm1.geojson")
+
+if(!file.exists(COUNTRY_OUT)){
+  ken_1_sf <- gadm("KEN", level=1, path = tempdir()) %>% st_as_sf()
+  ken_1_sf <- ken_1_sf %>% st_simplify(dTolerance = 60)
+  ken_1_sf <- ken_1_sf %>%
+    select(NAME_1)
+  
+  st_write(ken_1_sf, COUNTRY_OUT, delete_dsn = T)
+}
+
+## Elevation
+RAST_OUT <- here("data", "elevation.tif")
+
+if(!file.exists(RAST_OUT)){
+  
+  elev_r <- elevation_30s(country="KEN", path=tempdir())
+  
+  writeRaster(elev_r, RAST_OUT, overwrite=T)
+}
+
+## Precipiation
+RAST_STACK_OUT <- here("data", "precipitation.tif")
+
+if(!file.exists(RAST_STACK_OUT)){
+  precip_kenya_r <- worldclim_country(var = "prec", res = 10, 
+                                      country = "KEN",
+                                      path = tempdir())
+  
+  writeRaster(precip_kenya_r, RAST_STACK_OUT, overwrite=T)
+}
+
+
+## Nairobi
+POLY_OUT <- here("data", "city.geojson")
+
+if(!file.exists(POLY_OUT)){
+  ken_sf <- gadm("KEN", level=2, path = tempdir()) %>% st_as_sf()
+  nbo_sf <- ken_sf %>% filter(NAME_1 %in% "Nairobi")
+  
+  st_write(nbo_sf, POLY_OUT, delete_dsn = T)
+}
+
+## Roads
+LINE_OUT <- here("data", "roads.geojson")
+
+if(!file.exists(LINE_OUT)){
+  
+  ken_sf <- gadm("KEN", level=2, path = tempdir()) %>% st_as_sf()
+  nbo_sf <- ken_sf %>% filter(NAME_1 %in% "Nairobi")
+  
+  roads_list <- opq(bbox = st_bbox(nbo_sf)) %>%
+    add_osm_feature(key = 'highway', value = c('trunk',
+                                               'motorway',
+                                               'primary',
+                                               'secondary')) %>%
+    osmdata_sf()
+  roads_sf <- roads_list$osm_lines
+  roads_sf <- roads_sf %>% st_intersection(nbo_sf)
+  
+  roads_sf$geom_type <- roads_sf %>% st_geometry_type %>% as.character()
+  roads_sf <- roads_sf[roads_sf$geom_type %in% "LINESTRING",]
+  
+  roads_sf <- roads_sf %>%
+    dplyr::select(osm_id, name, highway)
+  
+  st_write(roads_sf, LINE_OUT, delete_dsn = T)
+}
+
+## Schools
+POINT_OUT <- here("data", "schools.csv")
+
+if(!file.exists(POINT_OUT)){
+  
+  ken_sf <- gadm("KEN", level=2, path = tempdir()) %>% st_as_sf()
+  nbo_sf <- ken_sf %>% filter(NAME_1 %in% "Nairobi")
+  
+  schools_list <- opq(bbox = st_bbox(nbo_sf)) %>%
+    add_osm_feature(key = 'amenity',
+                    value = 'school') %>%
+    osmdata_sf()
+  
+  schools_sf <- schools_list$osm_points
+  schools_sf <- schools_sf %>% st_intersection(nbo_sf)
+  schools_sf <- schools_sf %>%
+    dplyr::select(osm_id, name)
+  
+  schools_df <- schools_sf %>%
+    st_coordinates() %>%
+    as.data.frame() %>%
+    dplyr::rename(longitude = X,
+                  latitude = Y)
+  
+  write_csv(schools_df, POINT_OUT)
+}
+
+```
+
+# Setup
+
+Run the following code, which will download the github repo.
+
+```{r}
+#| eval: false
+
+library(usethis)
+use_course(url = "https://github.com/ramarty/ntl-training/archive/main.zip")
+```
+
+# Spatial Data
+
+## Data Types
+
+There are two main types of spatial data: (1) __vector data__ and (2) __raster data__.
+
+|       | Vector Data | Raster Data|
+| ----- | ----- | ----- |
+| What  | Points, lines, or polygons | Spatially referenced grid |
+| Common file formats | Shapefiles (.shp), geojsons (.geojson) | Geotif (.tif), NetCDF files |
+| Examples | Polygons of countries, polylines of roads, points of schools | Satellite imagery |
+
+<table>
+<tr>
+<td style="text-align: center;"><strong>Vector</strong></td>
+<td style="text-align: center;"><strong>Raster</strong></td>
+</tr>
+<tr>
+<td style="padding-right: 50px;"><img src="img/vector.png" alt="Vector" width="300"></td>
+<td style="padding-left: 50px;"><img src="img/raster.png" alt="Raster" width="300"></td>
+</tr>
+</table>
+
+
+## Coordinate Reference Systems (CRS)
+
+* __Coordinate reference systems (CRS)__ are frameworks that define locations on earth using coordinates.
+
+* For example, the World Bank is at latitude 38.89 and longitude -77.04.
+
+![](img/googlemaps_worldbank.png)
+
+* There are many different coordinate reference systems, which can be grouped into __geographic (or spherical)__ and __projected__ coordinate reference systems. Geographic systems live on a sphere, while projected systems are ``projected'' onto a flat surface.
+
+![](img/geo_proj_crs.png)
+
+### Geographic Coordinate Systems
+
+#### Overview
+
+__Units:__ Defined by latitude and longitude, which measure angles and units are typically in decimal degrees. (Eg, angle is latitude from the equator).
+
+__Latitude & Longitude:__ 
+
+* On a grid X = longitude, Y = latitude; sometimes represented as (longitude, latitude). 
+* Also has become convention to report them in alphabetical order: (latitude, longitude) — such as in Google Maps.
+* Valid range of latitude: -90 to 90
+* Valid range of longitude: -180 to 180
+* __{Tip}__ Latitude sounds (and looks!) like latter
+
+![](img/longlat.png)
+
+#### Distance on a sphere
+
+* At the equator (latitude = 0), a 1 decimal degree longitude distance is about 111km; towards the poles (latitude = -90 or 90), a 1 decimal degree longitude distance converges to 0 km. 
+* We must be careful (ie, use algorithms that account for a spherical earth) to calculate distances! The distance along a sphere is referred to as a [great circle distance](https://en.wikipedia.org/wiki/Great-circle_distance).
+* Multiple options for spherical distance calculations, with trade-off between accuracy & complexity. (See distance section for details).
+
+<table>
+<tr>
+<td style="padding-right: 50px;"><img src="img/longitude_distance.png" alt="Vector" width="300"></td>
+<td style="padding-left: 50px;"><img src="img/greatcircle.png" alt="Raster" width="400"></td>
+</tr>
+</table>
+
+#### Datums
+
+* __Is the earth flat?__ No!
+* __Is the earth a sphere?__ No!
+* __Is the earth a lumpy ellipsoid?__ [Yes!](https://oceanservice.noaa.gov/facts/earth-round.html#:~:text=The%20Earth%20is%20an%20irregularly%20shaped%20ellipsoid.&text=While%20the%20Earth%20appears%20to,unique%20and%20ever%2Dchanging%20shape.)
+
+The earth is a lumpy ellipsoid, a bit flattened at the poles. 
+
+* A [datum](https://www.maptoaster.com/maptoaster-topo-nz/articles/projection/datum-projection.html) is a model of the earth that is used in mapping. One of the most common datums is [WGS 84](https://en.wikipedia.org/wiki/World_Geodetic_System), which is used by the Global Positional System (GPS). 
+* A datum is a reference ellipsoid that approximates the shape of the earth.
+* Other datums exist, and the latitude and longitude values for a specific location will be different depending on the datum.
+
+<table>
+<tr>
+<td style="padding-right: 50px;"><img src="img/datum1.png" alt="Vector" width="300"></td>
+<td style="padding-left: 50px;"><img src="img/datum2.png" alt="Raster" width="300"></td>
+</tr>
+</table>
+
+### Projected Coordinate Systems
+
+Projected coordinate systems project spatial data from a 3D to 2D surface.
+
+__Distortions:__ Projections will distort some combination of distance, area, shape or direction. Different projections can minimize distorting some aspect at the expense of others. 
+
+__Units:__ When projected, points are represented as _northings_ and _eastings._ Values are often represented in meters, where northings/eastings are the meter distance from some reference point. Consequently, values can be very large!
+
+__Datums still relevant:__ Projections start from some representation of the earth. Many projections (eg, [UTM](https://en.wikipedia.org/wiki/Universal_Transverse_Mercator_coordinate_system)) use the WGS84 datum as a starting point (ie, reference datum), then project it onto a flat surface. 
+
+<table>
+<tr>
+<td style="text-align: center;">
+<strong><a href="https://www.youtube.com/watch?v=eLqC3FNNOaI" target="_blank">Click here to see why Toby looks so confused</a></strong>
+</td>
+<td style="text-align: center;"><strong>Different Projections</strong></td>
+</tr>
+<tr>
+<td style="padding-right: 50px;"><img src="img/westwing.png" alt="Vector" width="300"></td>
+<td style="padding-left: 50px;"><img src="img/mercator_galls.png" alt="Raster" width="400"></td>
+</tr>
+</table>
+
+### Referencing Coordinate Reference Systems
+
+* There are many ways to reference coordinate systems, some of which are verbose. 
+* __PROJ__ (Library for projections) way of referencing WGS84 `+proj=longlat +datum=WGS84 +no_defs +type=crs`
+* __[EPSG](https://epsg.io/)__ Assigns numeric code to CRSs to make it easier to reference. Here, WGS84 is `4326`. 
+
+### CRS as Units
+
+Whenever have spatial data, need to know which coordinate reference system (CRS) the data is in.
+
+* You wouldn’t say __“I am 5 away”__
+* You would say __“I am 5 [miles / kilometers / minutes / hours] away”__ (units!)
+* Similarly, a “complete” way to describe location would be: I am at __6.51 latitude, 3.52 longitude using the WGS 84 CRS__
+
+### Quiz
+
+Explain what's going on here.
+
+![](img/basketball_mercator.png)
+
+# Spatial Analysis in R
+
+## Packages for spatial data
+
+There are many packages for working with spatial data. Below summarizes some of the most commonly used packages for spatial analysis.
+
+* [sf](https://r-spatial.github.io/sf/): Package for working with vector data. (sf = simple features)
+* [terra](https://rspatial.github.io/terra/): Package for working with both raster data and vector data.
+* [tidyterra](https://dieghernan.github.io/tidyterra/): Provides methods common to tidyverse for working with terra objects; also provides additional geoms for plotting spatial data using `ggplot`
+* [leaflet](https://rstudio.github.io/leaflet/) R interface to leaflet, a JavaScript library for interactive maps
+
+:::{.callout-note}
+Before `sf`, the `sp` package was used; before `terra`, the `raster` package was used. When googling/asking AI about spatial data analysis in R, you may come across these packages. Answers using these packages may be out of date. In particular, the `sp` package handles spatial data notably different than `sf`. 
+
+* `sp` objects are similar to `shapefiles`; a shapefile isn't one file, it's a collection of files---one file contains the geometries (shapes), another contains the CRS, another contains the data, etc. Similarly, `sp` files were a list---one item of the list contained the geometries (shapes), another item contained the CRS, etc. 
+
+* `sf` objects are set up more similar to `geojsons`, where each row of the dataframe has a geometry column.
+:::
+
+## Spherical Geometry in s2 
+
+Often, spatial data comes in the WGS 84 CRS (EPSG:4326). This is a geographic/spherical coordinate reference system where the unit of analysis is decimal degrees. __The `sf` package makes it easy to compute distances and areas in terms of meters, taking into account the curvature of the earth.__ For this, `sf` relies on the [s2](http://s2geometry.io/about/overview) library developed by Google which facilitates quickly computing distances and areas. 
+
+The s2 library uses a system of spatial grids and relies on great circle distance formula for distance calculations; for more information, see [here](http://s2geometry.io/about/overview). While the sf package uses s2 by default, it can be turned off using `sf_use_s2(false)` (but use caution when doing so).
+
+:::{.callout-note}
+Instead of relying on s2, there are two other common ways of computing distances/areas.
+
+* __Project data:__ One approach is to project the data, so that the data is represented on a 2-dimensional surface and where the units are something like meters (meters are a common unit for projected CRS, but not always used; some US projected CRSs use feet). When projected, we can rely on standard formula for calculating distances/areas---such as the distance formula for distances. However, this approach requires picking a projected CRS that is accurate for the location.
+
+* __Spherical Trigonometry:__ One approach to stay on a geographic CRS and use more advanced equations that account for being on a sphere. For example, for calculating distances, a number of [great circle distance](https://en.wikipedia.org/wiki/Great-circle_distance#:~:text=The%20great%2Dcircle%20distance%2C%20orthodromic,the%20surface%20of%20the%20sphere.) formulas exist---such as the [Haversine Formula](https://en.wikipedia.org/wiki/Haversine_formula), [Vincenty's Formula](https://en.wikipedia.org/wiki/Vincenty%27s_formulae), etc. The [geosphere](https://github.com/rspatial/geosphere) package facilitates using these. However, these formula can be slow to implement for large numbers of observations. The `s2` library does rely on these formula; however, it uses them in combination with other methods.
+:::
+
+# Vector Data
+
+For the exercises working with vector data, we'll rely on the following packages:
+
+```{r}
+library(tidyverse)
+library(here)
+library(sf)
+library(leaflet)
+```
+
+## Data Types
+
+### Polygons
+
+__Load data__
+```{r}
+city_sf <- st_read(here("data", "city.geojson"), quiet = T)
+```
+
+__Functions that work on dataframes to explore data work on sf objects__
+```{r}
+# Examine first few observations
+head(city_sf)
+
+# Number of rows
+nrow(city_sf)
+
+# Filter
+city_sf %>%
+  filter(NAME_2 == "Langata")
+```
+
+__sf specific functions__
+```{r}
+# Check coordinate reference system
+st_crs(city_sf)
+
+# Check geometry type
+st_geometry_type(city_sf) %>% head()
+```
+
+__Area is not a variable, but we can calculate it__
+```{r}
+# Calculate area
+st_area(city_sf)
+
+# Add as variable
+city_sf <- city_sf %>%
+  mutate(area_m2 = st_area(city_sf))
+```
+
+__Static plot using geom_sf__
+
+```{r}
+ggplot() +
+  geom_sf(data = city_sf)
+```
+
+### Polylines
+
+```{r}
+roads_sf <- st_read(here("data", "roads.geojson"), quiet = T)
+
+head(roads_sf)
+
+nrow(roads_sf)
+
+st_length(roads_sf) %>% head()
+
+ggplot() +
+  geom_sf(data = roads_sf)
+```
+
+### Points
+
+__Load dataframe that includes latitude & longitude as variables__
+```{r}
+schools_df <- read_csv(here("data", "schools.csv"))
+
+head(schools_df)
+```
+
+__Convert dataframe to sf object__
+
+* Note that coordiantes is c(longitude, latitude) -- ie, (x, y) format
+* OpenStreetMaps uses the (very) common EPSG:4326
+
+```{r}
+schools_sf <- schools_df %>%
+  st_as_sf(coords = c("longitude", "latitude"),
+           crs = 4326)
+
+head(schools_sf)
+
+ggplot() +
+  geom_sf(data = schools_sf)
+```
+
+## Maps
+
+### Make better static map
+```{r}
+
+# Merge data with city
+city_sf <- city_sf %>%
+  mutate(area = city_sf %>% 
+           st_area %>% # Calculate area
+           as.numeric()) # Remove units
+
+# Plot
+ggplot() +
+  geom_sf(data = city_sf, 
+          aes(fill = area),
+          color = "black") +
+  scale_fill_distiller(palette = "YlGnBu", 
+                       direction = -1) + 
+  labs(fill = "Area",
+       title = "Area of Nairobi's ADM2s") +
+  theme_void() +
+  theme(legend.position = c(0.8, 0.3),
+        plot.title = element_text(face = "bold"))
+```
+
+### Interactive Map
+
+We use the `leaflet` package to make interactive maps. [Leaflet](https://leafletjs.com/) is a JavaScript library, but the `leaflet` R package allows making interactive maps using R. Use of leaflet somewhat mimics how we use ggplot.
+
+* Start with `leaflet()` (instead of `ggplot()`)
+* Add spatial layers, defining type of layer (similar to geometries)
+
+:::{.callout-note}
+We can spent lots of time going over what we can done with leaflet - but that would take up too much time. [This resource](https://rstudio.github.io/leaflet/articles/colors.html) provides helpful tutorials for things like:
+
+* Changing the basemap 
+* Adding colors
+* Adding a legend
+* And much more!
+:::
+
+__Basic Map__
+
+```{r}
+leaflet() %>%
+  addTiles() %>% # Basemap
+  addPolygons(data = city_sf)
+```
+
+
+__Add Multiple Layers__
+
+```{r}
+trunk_sf <- roads_sf %>%
+  filter(highway == "trunk")
+
+leaflet() %>%
+  addTiles() %>% 
+  addPolygons(data = city_sf, fillOpacity = 0.1) %>%
+  addPolylines(data = trunk_sf, color = "red") %>%
+  addCircles(data = schools_sf, color = "black")
+```
+
+## Spatial Operations on 1 Dataset
+
+* `st_combine`: Dissolve by attribute (without resolving boundaries)
+* `st_combine`: Dissolve by attribute (resolving boundaries)
+* `st_buffer`: Buffer point/line/polygon
+* `st_transform`: Transform CRS
+* `st_centroid`: Create new sf object that uses the centroid
+* `st_drop_geometry`: Drop geometry; convert from sf to dataframe
+* `st_bbox`: Get bounding box
+
+### Dissolve
+
+Aggregate spatial units.
+
+* `st_combine` Combines geometries without resolving boundaries
+* `st_union` Combines geometries with resolved boundaries
+
+In the below example, we aggregate from the ADM 2 level to the ADM 1 level. In short, we go from 68 observations to 1 (1 for Nairobi).
+
+```{r}
+## Dissolve
+city_adm1_union_sf <- city_sf %>%
+  group_by(NAME_1) %>%
+  summarise(geometry = st_union(geometry)) %>%
+  ungroup()
+
+city_adm1_combine_sf <- city_sf %>%
+  group_by(NAME_1) %>%
+  summarise(geometry = st_combine(geometry)) %>%
+  ungroup()
+
+## Check N rows
+nrow(city_sf) # Original
+nrow(city_adm1_union_sf)
+nrow(city_adm1_combine_sf)
+
+## Plot
+ggplot() +
+  geom_sf(data = city_adm1_union_sf,
+          aes(color = "Using: st_union"),
+          fill = NA,
+          linewidth = 3) +
+  geom_sf(data = city_adm1_combine_sf,
+          aes(color = "Using: st_combine"),
+          fill = NA,
+          linewidth = 1) +
+  labs(color = NULL) +
+  theme_void() +
+  theme(legend.position = c(0.8, 0.25))
+```
+
+### Buffer
+
+Buffer trunk roads by 1 km. This will turn the polyine into a polygon. For this, we use `st_buffer`; the `dist` parameter specifies the buffer radius in meters.
+
+```{r}
+motor_1km_sf <- roads_sf %>%
+  filter(highway == "motorway") %>%
+  st_buffer(dist = 1000)
+
+ggplot() +
+  geom_sf(data = motor_1km_sf)
+```
+
+### Transform CRS
+
+`st_transform` is used to change from one coordinate reference system to another. Below, we project the city boundaries using a projection for Kenya ([EPSG:21097](https://epsg.io/21097)). Note the coordinate values (northings and eastings) are now very large; this is because their units are now meters.
+
+
+```{r}
+st_transform(city_sf, 21097) %>%
+  select(NAME_2) %>%
+  head()
+```
+
+
+### Create Centroid
+`st_centroid` converts the spatial object to points, where the point is the centroid (ie, center) of each observation (eg, centroid of a polygon). Below, we determine the centroids of ADM2 polygons. Note the geometry type is now `POINT`.
+
+```{r}
+city_sf %>%
+  st_centroid() %>%
+  select(NAME_2) %>%
+  head()
+```
+
+
+### Drop Geometry
+
+`st_drop_geometry` is used to drop the geometry column, which also converts the object from sf to a dataframe.
+
+```{r}
+
+# INCORRECT: Does not work to remove geometry
+city_sf %>%
+  select(-geometry) %>%
+  head()
+
+# CORRECT: Remove geometry and convert from sf to dataframe
+city_sf %>%
+  st_drop_geometry() %>%
+  head()
+
+```
+
+
+### Bounding Box
+`st_bbox` is used to get bounding box of the object.
+
+```{r}
+st_bbox(city_sf)
+```
+
+
+## Spatial Operations on 2 Datasets
+
+* `st_intersects`: Indicates whether simple features intersect.
+* `st_intersection`: Cut one spatial object based on another.
+* `st_difference`: Remove part of spatial object based on another.  
+* `st_distance`: Calculate distances.
+* `st_join`: Spatial join (ie, add attributes of one dataframe to another based on location). 
+
+### Determine if objects intersect
+
+`st_intersects` is used to determine whether a spatial object intersects with another (returning T/F). By default, a sparse matrix is returned; setting `sparse = FALSE` returns a dense matrix. Below we determine which motorway segments intersection with Langata or Roysambu.
+
+```{r}
+## Filter
+motor_sf <- roads_sf %>%
+  filter(highway == "motorway")
+
+lng_roy_sf <- city_sf %>%
+  filter(NAME_2 %in% c("Langata",
+                       "Roysambu"))
+
+## Intersect
+motor_sf$inter_roads <- st_intersects(motor_sf, lng_roy_sf, sparse = F) %>% 
+  apply(1, max)
+
+## Examine results
+table(motor_sf$inter_roads)
+```
+
+
+### Spatial Intersection
+
+We want to only keep spatial objects that intersect with another object. For this, we use `st_intersection`. In this example, we only keep roads that are in Langata or Roysambu.
+
+```{r}
+lng_roy_sf <- city_sf %>%
+  filter(NAME_2 %in% c("Langata",
+                       "Roysambu")) %>%
+  st_union() # Simplifies things if make 1 unit
+
+roads_lng_roy_sf <- st_intersection(roads_sf, lng_roy_sf)
+
+ggplot() +
+  geom_sf(data = city_sf) +
+  geom_sf(data = lng_roy_sf, aes(color = "Langata or\nRoysambu")) +
+  geom_sf(data = roads_lng_roy_sf) +
+  labs(color = NULL) +
+  theme_void() +
+  theme(legend.position = c(0.8, 0.25))
+```
+### Spatial Difference
+
+Spatial difference is the opposite of spatial intersection. Here, we want to only keep spatial objects that intersect with another object. For this, we use `st_difference`. In this example, we exclude roads that are in Langata or Roysambu.
+
+```{r}
+lng_roy_sf <- city_sf %>%
+  filter(NAME_2 %in% c("Langata",
+                       "Roysambu")) %>%
+  st_union() # Simplifies things if make 1 unit
+
+roads_diff_sf <- st_difference(roads_sf, lng_roy_sf)
+
+ggplot() +
+  geom_sf(data = city_sf) +
+  geom_sf(data = lng_roy_sf, aes(color = "Langata or\nRoysambu")) +
+  geom_sf(data = roads_diff_sf) +
+  labs(color = NULL) +
+  theme_void() +
+  theme(legend.position = c(0.8, 0.25))
+```
+
+### Distance
+
+Use `st_distance` to calculate distances between spatial objects. The function will return a matrix of distances between each observation of the objects.
+
+Below we calculate the distance of schools to one of the following ADM2s: 
+
+```{r}
+city_kib_sf <- city_sf %>%
+  filter(NAME_2 %in% c("Kibra", "Langata", "Westlands"))
+
+# Distance of each school to each ADM
+st_distance(schools_sf, city_kib_sf) %>% head()
+
+# For each ADM, minimum distance of each school to the ADMs
+schools_sf$dist_adm_m <- st_distance(schools_sf, city_kib_sf) %>% apply(1, min)
+```
+
+### Spatial Join
+
+Spatial join using `st_join` works similarly to joining on an attribute (eg, `left_join`); however, here we merge by location. Below, we add the name of the administrative zone to the school dataset.
+
+```{r}
+schools_sf <- st_join(schools_sf, city_sf)
+
+names(schools_sf)
+```
+
+## Exercise 1
+
+__Simple:__ What proportion of schools are within 1km of a trunk road?
+
+__Advanced:__ Create a graph showing the proportion of schools within 1 to 5km of a trunk road, at 0.5km intervals.
+
+```{r}
+#| eval: false
+
+## Load packages
+library(tidyverse)
+library(here)
+library(sf)
+
+## Load data
+roads_sf   <- st_read(here("data", "roads.geojson"), quiet = T)
+schools_df <- read_csv(here("data", "schools.csv"))
+```
+
+__Simple solution__
+
+<details>
+<summary>Click to see solution</summary>
+
+```{r}
+#| message: false
+#| warning: false
+#| echo: fenced
+
+## Load packages
+library(tidyverse)
+library(here)
+library(sf)
+
+## Load data
+roads_sf   <- st_read(here("data", "roads.geojson"), quiet = T)
+schools_df <- read_csv(here("data", "schools.csv"))
+
+## Convert schools to sf object
+schools_sf <- st_as_sf(schools_df,
+                       coords = c("longitude", "latitude"),
+                       crs = 4326)
+
+## Prep roads data
+trunk_sf <- roads_sf %>%
+  filter(highway == "trunk")
+
+## Distance to schools
+schools_sf$dist_trunk <- st_distance(schools_sf, trunk_sf) %>% apply(1, min)
+
+## Proportion within 5km
+mean(schools_sf$dist_trunk <= 1000)
+```
+</details>
+
+__Advanced solution__
+
+<details>
+<summary>Click to see solution</summary>
+
+```{r}
+#| message: false
+#| warning: false
+#| echo: fenced
+
+## Load packages
+library(tidyverse)
+library(here)
+library(sf)
+library(purrr)
+
+## Load data
+roads_sf   <- st_read(here("data", "roads.geojson"), quiet = T)
+schools_df <- read_csv(here("data", "schools.csv"))
+
+## Convert schools to sf object
+schools_sf <- st_as_sf(schools_df,
+                       coords = c("longitude", "latitude"),
+                       crs = 4326)
+
+## Prep roads data
+trunk_sf <- roads_sf %>%
+  filter(highway == "trunk")
+
+## Distance to schools
+schools_sf$dist_trunk <- st_distance(schools_sf, trunk_sf) %>% apply(1, min)
+
+dist_df <- map_df(seq(0, 5, 0.5), function(dist_thresh_km){
+  prop <- mean(schools_sf$dist_trunk <= dist_thresh_km * 1000)
+  
+  data.frame(dist_thresh_km = dist_thresh_km,
+             prop = prop)
+})
+
+dist_df %>%
+  ggplot() +
+  geom_line(aes(x = dist_thresh_km,
+                y = prop),
+            linewidth = 1) +
+  labs(x = "Distance to Trunk Road (km)",
+       y = "Prop. Schools") +
+  theme_classic()
+```
+
+</details>
+
+## Exercise 2
+
+__Simple:__ Compute the length of trunk roads in Kasarani (ie, within `city_sf`, where `NAME_2` is Kasarani).
+
+__Advanced:__ Add variables on `city_sf` that indicate the length of each road type for each ADM 2 unit. 
+
+```{r}
+#| eval: false
+
+## Load packages
+library(tidyverse)
+library(here)
+library(sf)
+library(terra)
+library(exactextractr)
+
+## Load data
+nbo_sf   <- st_read(here("data", "city.geojson"), quiet = T)
+roads_sf <- st_read(here("data", "roads.geojson"), quiet = T)
+```
+
+__Solution: Simple__
+
+<details>
+<summary>Click to see solution</summary>
+```{r}
+#| message: false
+#| warning: false
+#| echo: fenced
+
+## Load packages
+library(tidyverse)
+library(here)
+library(sf)
+library(terra)
+library(exactextractr)
+
+## Load data
+nbo_sf  <- st_read(here("data", "city.geojson"), quiet = T)
+roads_sf <- st_read(here("data", "roads.geojson"), quiet = T)
+
+## Filter
+kas_sf <- nbo_sf %>%
+  filter(NAME_2 == "Kasarani")
+
+trunk_sf <- roads_sf %>%
+  filter(highway == "trunk")
+
+## Computer length
+trunk_sf %>% 
+  st_intersection(kas_sf) %>% 
+  st_length() %>% 
+  sum()
+```
+
+</details>
+
+__Solution: Advanced__
+
+<details>
+<summary>Click to see solution</summary>
+
+```{r}
+#| message: false
+#| warning: false
+#| echo: fenced
+
+## Load packages
+library(tidyverse)
+library(here)
+library(sf)
+
+## Load data
+nbo_sf  <- st_read(here("data", "city.geojson"), quiet = T)
+roads_sf <- st_read(here("data", "roads.geojson"), quiet = T)
+
+## Define function to calculate length of roads for each row in nbo_sf
+calc_rd_length <- function(nbo_sf, roads_sf){
+  
+  lapply(1:nrow(nbo_sf), function(i){
+    roads_sf %>% 
+      st_intersection(nbo_sf[i,]) %>% 
+      st_length() %>% 
+      sum()
+  }) %>%
+    unlist()
+  
+}
+
+## Use function for each road types
+for(highway_i in unique(roads_sf$highway)){
+  roads_sf_i <- roads_sf[roads_sf$highway == highway_i,]
+  
+  nbo_sf[[paste0(highway_i, "_length_m")]] <- calc_rd_length(nbo_sf, roads_sf)
+}
+
+head(nbo_sf)
+```
+
+</details>
+
+## Exercise 3
+
+__Simple:__ Make a map of Nairobi's ADM2s that shows the number of schools within each ADM2.
+
+* __Hint:__ If you're struck, try entering the following into your favorite AI chatbot; does the answer look accurate? __In R, I have a dataframe of schools called schools_df, which contains variables for latitude and longitude. I also have the second administrative divisions of a city as an sf polygon called city_sf and where each location is uniquely defined by the variable NAME_2. Make a static map using of administrative areas, where each administrative area polygon displays the number of schools within the administrative area. Provide R code for this.__
+
+__Advanced:__ Make an interactive map of Nairobi's ADM2s that shows the number of schools within each ADM2. _Note: This tutorial does not cover everything needed to do this, but the tutorial should hopefully provide enough background to enable you to efficienctly use Google/ChatGPT/etc to do this :)_
+
+```{r}
+#| eval: false
+
+## Load packages
+library(tidyverse)
+library(here)
+library(sf)
+
+## Load data
+city_sf    <- st_read(here("data", "city.geojson"), quiet = T)
+schools_df <- read_csv(here("data", "schools.csv"))
+```
+
+__Simple solution__
+
+<details>
+<summary>Click to see solution</summary>
+
+```{r}
+#| message: false
+#| warning: false
+#| echo: fenced
+
+## Load packages
+library(tidyverse)
+library(here)
+library(sf)
+
+## Load data
+city_sf    <- st_read(here("data", "city.geojson"), quiet = T)
+schools_df <- read_csv(here("data", "schools.csv"))
+
+## Convert schools to sf
+schools_sf <- st_as_sf(schools_df,
+                       coords = c("longitude", "latitude"),
+                       crs = 4326)
+
+# Dataframe of N schools per ADM
+adm1_n_schools_df <- schools_sf %>%
+  
+  # Use spatial join to add ADM names to schools
+  st_join(city_sf) %>%
+  
+  # Count schools within ADMs
+  group_by(NAME_2) %>%
+  summarise(n_schools = n()) %>%
+  ungroup() %>%
+  
+  # Remove geometry; convert from sf to dataframe
+  st_drop_geometry()
+
+# Merge data with city
+city_school_sf <- city_sf %>%
+  left_join(adm1_n_schools_df, by = "NAME_2")
+
+# Plot
+ggplot() +
+  geom_sf(data = city_school_sf, 
+          aes(fill = n_schools),
+          color = "black") +
+  scale_fill_distiller(palette = "YlGnBu", 
+                       direction = -1) + 
+  labs(fill = "N\nSchools",
+       title = "Number of schools in Nairobi") +
+  theme_void() +
+  theme(legend.position = c(0.8, 0.3),
+        plot.title = element_text(face = "bold"))
+```
+
+</details>
+
+__Advanced solution__
+
+<details>
+<summary>Click to see solution</summary>
+
+```{r}
+#| message: false
+#| warning: false
+#| echo: fenced
+
+## Load packages
+library(tidyverse)
+library(here)
+library(sf)
+library(leaflet)
+
+## Load data
+city_sf    <- st_read(here("data", "city.geojson"), quiet = T)
+schools_df <- read_csv(here("data", "schools.csv"))
+
+## Convert schools to sf
+schools_sf <- st_as_sf(schools_df,
+                       coords = c("longitude", "latitude"),
+                       crs = 4326)
+
+# Dataframe of N schools per ADM
+adm1_n_schools_df <- schools_sf %>%
+  
+  # Use spatial join to add ADM names to schools
+  st_join(city_sf) %>%
+  
+  # Count schools within ADMs
+  group_by(NAME_2) %>%
+  summarise(n_schools = n()) %>%
+  ungroup() %>%
+  
+  # Remove geometry; convert from sf to dataframe
+  st_drop_geometry()
+
+# Merge data with city
+city_school_sf <- city_sf %>%
+  left_join(adm1_n_schools_df, by = "NAME_2")
+
+# Define palette for leaflet map
+color_pal <- colorNumeric(palette = "YlOrRd", domain = city_school_sf$n_schools)
+
+# Create a leaflet map
+leaflet(city_school_sf) %>%
+  addTiles() %>%  
+  addPolygons(
+    fillColor = ~color_pal(n_schools),
+    weight = 1,
+    color = "black",
+    fillOpacity = 0.7,
+    highlight = highlightOptions(
+      weight = 3,
+      color = "#666",
+      bringToFront = TRUE
+    ),
+    label = ~paste("Schools:", n_schools)  
+  ) %>%
+  addLegend(
+    pal = color_pal, 
+    values = city_school_sf$n_schools, 
+    position = "bottomright", 
+    title = "N\nSchools"
+  ) %>%
+  addControl("<b>Number of schools in Nairobi</b>", position = "topright")
+```
+
+</details>
+
+# Raster Data
+
+For the exercises working with raster data, we'll rely on the following packages:
+```{r}
+library(tidyverse)
+library(here)
+library(sf)
+library(terra)
+library(leaflet)
+library(exactextractr)
+library(tidyterra)
+```
+
+
+## Load and explore data
+
+```{r}
+elev_r <- rast(here("data", "elevation.tif"))
+
+elev_r
+```
+
+## Plotting
+
+__Simple plot__
+```{r}
+plot(elev_r)
+```
+
+__Using ggplot__
+
+We use `ggplot` and the `tidyterra` package, which brings `geom_spatraster` for plotting rasters
+
+```{r}
+ggplot() +
+  geom_spatraster(data = elev_r) +
+  scale_fill_distiller(palette = "YlGnBu",
+                       na.value = "white") +
+  labs(fill = "Elevation") +
+  theme_void()
+```
+
+## Cropping
+
+Cropping cuts the polygon based on the bounding box of a polygon. Below, we crop the elevation raster to Nairobi.
+
+```{r}
+elev_nbo_r <- crop(elev_r, city_sf)
+
+plot(elev_nbo_r)
+```
+
+## Masking
+
+Masking sets values to `NA` that are outside of a polygon (or, using the inverse of a mask, setting values to `NA` that are within a polygon).
+
+__Mask Example 1:__ When we cropped (above), we removed raster cells outside of the _bounding box_ of Nairobi. Now, we set values to `NA` that are outside of the _polygon_ of Nairobi.
+
+```{r}
+elev_nbo_mask_r <- mask(elev_nbo_r, city_sf)
+
+plot(elev_nbo_mask_r)
+```
+
+__Mask Example 2:__ Let's only keep nighttime light values within 1 km of select schools.
+
+```{r}
+schools_df <- read_csv(here("data", "schools.csv"))[c(1,1000,2000,3000),]
+schools_sf <- st_as_sf(schools_df,
+                       coords = c("longitude", "latitude"),
+                       crs = 4326) %>%
+  st_buffer(dist = 1000)
+
+elev_nbo_schools_r <- mask(elev_nbo_mask_r, schools_sf)
+
+ggplot() +
+  geom_spatraster(data = elev_nbo_schools_r) +
+  geom_sf(data = city_sf, color = "black", fill = NA) +
+  geom_sf(data = schools_sf, color = "red", fill = NA) +
+  theme_void()
+```
+
+__Mask Example 3:__ Let's exclude nighttime light values that are within 1km of select schools.
+
+```{r}
+elev_nbo_excl_schools_r <- mask(elev_nbo_mask_r, schools_sf, inverse = T)
+
+ggplot() +
+  geom_spatraster(data = elev_nbo_excl_schools_r) +
+  geom_sf(data = city_sf, color = "black", fill = NA) +
+  geom_sf(data = schools_sf, color = "red", fill = NA) +
+  theme_void()
+```
+
+## Zonal Stats
+
+__Using [terra::extract](https://rspatial.github.io/terra/reference/extract.html)__
+```{r}
+ken_sf <- st_read(here("data", "kenya_adm1.geojson"), quiet = T)
+
+ken_sf$elev_v1 <- extract(elev_r, ken_sf, fun = "mean")$KEN_elv_msk 
+```
+
+__Using [exactextractr::exact_extract]()__
+```{r}
+ken_sf$elev_v2 <- exact_extract(elev_r, ken_sf, fun = "mean", progress = F)
+
+head(ken_sf)
+```
+
+## Raster algebra
+
+Raster algrabra refers to performing algebraic operations on a raster, such as taking the log of raster values or adding values of two rasters together.
+
+### Raster Algebra on 1 Raster
+
+```{r}
+## Log value
+elev_log_r <- log(elev_r)
+
+plot(elev_log_r)
+
+## Subsetting
+# Set all values above 1000 to NA
+elev_tmp_r <- elev_r
+elev_tmp_r[elev_tmp_r > 1000] <- NA
+
+plot(elev_tmp_r)
+
+## Create binary indicator if above NA
+elev_bin_r <- elev_r > 1000
+
+plot(elev_bin_r)
+```
+
+### Raster Algebra on 2 Rasters
+
+__We'll use data on elevation and precipitation. First, let's load and explore precipitation data & compare it with elevation data.__
+
+
+```{r}
+#### Load and explore data
+# We use [[1]] as 'precipitation.tif' contains a layer for each month;
+# see next section on raster stacks.
+precip_r <- rast(here("data", "precipitation.tif"))[[1]]
+
+plot(precip_r)
+
+precip_r
+elev_r
+```
+
+__For raster algebra on both rasters, the extents must be the same (see above that they aren't).__
+
+```{r}
+#### Extents must be the same
+precip_r <- crop(precip_r, elev_r)
+
+precip_r
+
+```
+
+__Now, we'll perform raster algebra using both rasters. Here, we only want to consider precipitation in locations where elevation is > 1000m.__ 
+
+```{r}
+
+#### Only consider precipitaion in areas above 1000m elevation
+elev_bin_r <- elev_r > 1000
+precip_a1000_r <- precip_r  * elev_r
+
+plot(precip_a1000_r)
+```
+
+## Raster with multiple layers
+
+Raster files can contain more than one layer. Often different layers represent different time periods. Below we show an example of a precipitation dataset that shows monthly precipitation values.
+
+```{r}
+precip_r <- rast(here("data", "precipitation.tif"))
+
+precip_r
+
+plot(precip_r)
+```
+
+__Zonal stats are mapped across all rasters__
+
+```{r}
+precip_adm1_df <- exact_extract(precip_r, ken_sf, fun = "sum", progress = FALSE)
+
+head(precip_adm1_df)
+```
+
+__Raster algebra are mapped across all rasters__
+
+```{r}
+precip_bin_r <- precip_r > 100
+
+plot(precip_bin_r)
+```
+
+__We can easily compute the average precipitation across all months__
+
+```{r}
+precip_all_months_r <- mean(precip_r)
+```
+
+__We can also compute average precipitation for a subset of months, such as the first 6 months__
+
+```{r}
+precip_jan_to_june_r <- mean(precip_r[[1:6]])
+```
+
+## Exercise 4
+
+Make of map of Kenya's ADM 1 units that shows the proportion of each unit that is above 2000 meters of elevation.
+
+```{r}
+#| eval: false
+
+## Load packages
+library(tidyverse)
+library(here)
+library(sf)
+library(terra)
+library(exactextractr)
+
+## Load data
+ken_sf <- st_read(here("data", "kenya_adm1.geojson"))
+elev_r <- rast(here("data", "elevation.tif"))
+```
+
+__Solution__
+
+<details>
+<summary>Click to see solution</summary>
+```{r}
+#| message: false
+#| warning: false
+#| echo: fenced
+
+## Load packages
+library(tidyverse)
+library(here)
+library(sf)
+library(terra)
+library(exactextractr)
+
+## Load data
+ken_sf <- st_read(here("data", "kenya_adm1.geojson"))
+elev_r <- rast(here("data", "elevation.tif"))
+
+## Make raster that is binary; True if > 2000 meters
+elev_a2000_r <- elev_r > 2000
+
+## Zonal stats
+ken_sf$prop_a2000 <- exact_extract(elev_a2000_r, ken_sf, fun = "mean", progress = FALSE)
+
+## Map
+ggplot() +
+  geom_sf(data = ken_sf,
+          aes(fill = prop_a2000)) +
+  labs(fill = "Proportion land\n>2000 meters\nelevation") +
+  theme_void()
+```
+
+</details>
+
+## Exercise 5
+
+Calculate the following for Nairobi:
+
+1. Average elevation of areas within 20 meters of roads
+2. Average elevation of areas excluding areas within 20 meters of roads
+
+```{r}
+#| eval: false
+
+## Load packages
+library(tidyverse)
+library(here)
+library(sf)
+library(terra)
+library(exactextractr)
+
+## Load data
+city_sf  <- st_read(here("data", "city.geojson"))
+roads_sf <- st_read(here("data", "roads.geojson"))
+elev_r   <- rast(here("data", "elevation.tif"))
+```
+
+__Solution__
+
+<details>
+<summary>Click to see solution</summary>
+```{r}
+#| message: false
+#| warning: false
+#| echo: fenced
+
+## Load packages
+library(tidyverse)
+library(here)
+library(sf)
+library(terra)
+library(exactextractr)
+
+### Load data
+city_sf  <- st_read(here("data", "city.geojson"))
+roads_sf <- st_read(here("data", "roads.geojson"))
+elev_r   <- rast(here("data", "elevation.tif"))
+
+### Prep elevation file
+# Restrict to Nairobi
+elev_nbo_r <- elev_r %>% crop(city_sf) %>% mask(city_sf)
+
+### Create roads buffer
+roads_buff_sf <- roads_sf %>%
+  st_union() %>% # Makes buffering quicker
+  st_buffer(dist = 20) 
+
+### Create city layer that excludes roads
+city_adm0_sf <- city_sf %>% 
+  st_union() %>%
+  st_difference(roads_buff_sf) 
+
+### Calculate average
+exact_extract(elev_nbo_r, roads_buff_sf, fun = "mean") # Within roads
+exact_extract(elev_nbo_r, city_adm0_sf, fun = "mean")  # Excluding roads
+```
+
+</details>
+
+## Exercise 6
+
+__Simple:__ Make a raster map of precipitation, using average precipitation across all months.
+
+__Advanced:__ Make an interactive map of quarterly precipitation where the user can toggle between different quarters. _Note: This tutorial does not cover everything needed to do this, but the tutorial should hopefully provide enough background to enable you to efficienctly use Google/ChatGPT/etc to do this :)_
+
+```{r}
+#| eval: false
+
+## Load packages
+library(tidyverse)
+library(here)
+library(sf)
+library(terra)
+library(tidyterra)
+
+## Load data
+ken_sf   <- st_read(here("data", "kenya_adm1.geojson"))
+precip_r <- rast(here("data", "precipitation.tif"))
+```
+
+__Simple solution__
+
+<details>
+<summary>Click to see solution</summary>
+
+```{r}
+#| message: false
+#| warning: false
+
+## Load packages
+library(tidyverse)
+library(here)
+library(sf)
+library(terra)
+library(tidyterra)
+
+## Load data
+ken_sf   <- st_read(here("data", "kenya_adm1.geojson"))
+precip_r <- rast(here("data", "precipitation.tif"))
+
+precip_r <- precip_r %>% 
+  crop(ken_sf) %>% 
+  mask(ken_sf) %>%
+  mean()
+
+## Plot
+ggplot() +
+  geom_spatraster(data = precip_r) +
+  scale_fill_distiller(palette = "Blues",
+                       na.value = "white",
+                       direction = 1) +
+  labs(fill = "Precipitation",
+       title = "Precipitation in Kenya") +
+  theme_void() +
+  theme(plot.title = element_text(face = "bold"))
+```
+
+</details>
+
+__Advanced solution__
+
+<details>
+<summary>Click to see solution</summary>
+
+```{r}
+#| message: false
+#| warning: false
+#| echo: fenced
+
+## Load packages
+library(tidyverse)
+library(here)
+library(sf)
+library(terra)
+library(leaflet)
+
+## Load data
+ken_sf   <- st_read(here("data", "kenya_adm1.geojson"))
+precip_r <- rast(here("data", "precipitation.tif"))
+
+## Crop/Mask to Kenya
+precip_r <- precip_r %>% crop(ken_sf) %>% mask(ken_sf)
+
+## Compute quarterly precipitation
+precip_q1_r <- precip_r[[1:3]] %>% mean()
+precip_q2_r <- precip_r[[4:6]] %>% mean()
+precip_q3_r <- precip_r[[7:9]] %>% mean()
+precip_q4_r <- precip_r[[10:12]] %>% mean()
+
+## Define color palette
+pal <- colorNumeric("Blues", unique(c(as.numeric(precip_q1_r[]),
+                                      as.numeric(precip_q2_r[]),
+                                      as.numeric(precip_q3_r[]),
+                                      as.numeric(precip_q4_r[]))),
+                    na.color = "transparent")
+
+leaflet() %>%
+  addProviderTiles(providers$Stadia.StamenTonerLite) %>%
+  addRasterImage(precip_q1_r, colors = pal, opacity = 1, group = "Q1: Jan - March") %>%
+  addRasterImage(precip_q2_r, colors = pal, opacity = 1, group = "Q2: April - June") %>%
+  addRasterImage(precip_q3_r, colors = pal, opacity = 1, group = "Q3: July - Sept") %>%
+  addRasterImage(precip_q4_r, colors = pal, opacity = 1, group = "Q4: Oct - Dec") %>%
+  addLayersControl(
+    baseGroups = c("Q1: Jan - March", 
+                   "Q2: April - June",
+                   "Q3: July - Sept",
+                   "Q4: Oct - Dec"),
+    options = layersControlOptions(collapsed=FALSE)
+  )
+
+```
+
+</details>
+
+# Additional Resources
+
+* Spatiotemporal arrays for vector and rasters using the [stars](https://r-spatial.github.io/stars/) package; allows for ``data cube'' objects with dimensions along multiple dimensions. 
+* [sf package cheatsheet](https://github.com/rstudio/cheatsheets/blob/main/sf.pdf)
+* [Spatial Data Science with Applications in R](https://r-spatial.org/book/)
+* [Geocomputation with R](https://r.geocompx.org/)
+

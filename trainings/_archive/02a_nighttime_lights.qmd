@@ -1,0 +1,27 @@
+---
+title: "Nighttime Lights and Economic Activity"
+author: "ieConnect"
+date: "10/07/2024"
+format: 
+  revealjs:
+    toc: false
+    slide-number: true
+    incremental: false
+    code-fold: false
+    code-link: true
+    transition: none
+knitr:
+  opts_chunk:
+    warning: false
+    message: false
+editor_options: 
+  chunk_output_type: inline
+---
+
+# Nighttime lights as proxy for stuff we care about
+
+## Nighttime lights for economic activity
+
+# Nighttime lights data sources
+
+
