@@ -5,8 +5,7 @@ output:
     progressive: true
     allow_skip: true
 runtime: shiny_prerendered
-description: >
-  Provides an introdiction to spatial analysis in R and for working with BlackMarble nighttime lights data.
+description: Provides an introdiction to spatial analysis in R and for working with BlackMarble nighttime lights data.
 ---
 
 ```{r setup, include=FALSE}
@@ -18,6 +17,8 @@ library(geodata)
 library(osmdata)
 library(leaflet)
 library(blackmarbler)
+library(tidyterra)
+library(exactextractr)
 library(here)
 
 tutorial_options(
@@ -234,82 +235,531 @@ head(gf_sf)
 
 __Load data__
 ```{r}
-city_sf <- read_sf(here("data", "city.geojson"), quiet = T)
+adm1_sf <- read_sf(here("data", "gadm", "nga_adm1.geojson"), quiet = T)
 ```
 
 __Functions that work on dataframes to explore data work on sf objects__
 ```{r}
 # Examine first few observations
-print(head(city_sf))
+print(head(adm1_sf))
 
 # Examine first few observations
-head(city_sf)
+head(adm1_sf)
 
 # Number of rows
-nrow(city_sf)
+nrow(adm1_sf)
 
 # Filter
-city_sf %>%
-  filter(NAME_2 == "Langata")
+adm1_sf %>%
+  filter(NAME_1 == "Lagos")
 ```
 
 __sf specific functions__
 ```{r}
 # Check coordinate reference system
-st_crs(city_sf)
+st_crs(adm1_sf)
 
 # Check geometry type
-st_geometry_type(city_sf) %>% head()
+st_geometry_type(adm1_sf) %>% head()
 ```
 
 __Area is not a variable, but we can calculate it__
 ```{r}
 # Calculate area
-st_area(city_sf)
+st_area(adm1_sf)
 
 # Add as variable
 # (as.numeric removes the units)
-city_sf <- city_sf %>%
+adm1_sf <- adm1_sf %>%
   mutate(area_m2 = geometry %>% st_area() %>% as.numeric())
-```
-
-__Static plot using geom_sf__
-
-```{r}
-ggplot() +
-  geom_sf(data = city_sf,
-          aes(fill = area_m2))
 ```
 
 __Exercise: Check the CRS & geometry type__
 ```{r ex_vector_basics_1, exercise = T}
-roads_sf <- read_sf(here("data", "roads.geojson"), quiet = T)
+roads_sf <- read_sf(here("data", "osm", "roads_nga_main.geojson"), quiet = T)
 
 ```
 
-__Exercise: Determine length of each road__
+__Exercise: Add the road length as a variable in `roads_sf`__
 ```{r ex_vector_basics_2, exercise = T}
-roads_sf <- read_sf(here("data", "roads.geojson"), quiet = T)
+roads_sf <- read_sf(here("data", "osm", "roads_nga_main.geojson"), quiet = T)
 
 ```
 
 ## Vector Data: Mapping
 
-## Vector Data: Spatial Operations
+### Static Maps
 
-### Spatial Operations on 1 Dataset
+__Static plot using geom_sf__
 
-### Spatial Operations on > 1 Dataset
+#### Simple
+```{r}
+ggplot() +
+  geom_sf(data = adm1_sf)
+```
+
+```{r}
+roads_sf <- read_sf(here("data", "osm", "roads_nga_main.geojson"), quiet = T)
+
+ggplot() +
+  geom_sf(data = adm1_sf) +
+  geom_sf(data = roads_sf) +
+  geom_sf(data = gf_sf)
+```
+
+#### Fill by Area
+```{r}
+ggplot() +
+  geom_sf(data = adm1_sf, 
+          aes(fill = area_m2),
+          color = "black") +
+  scale_fill_distiller(palette = "YlGnBu", 
+                       direction = -1) + 
+  labs(fill = "Area",
+       title = "Area of Nairobi's ADM2s") +
+  theme_void() +
+  theme(legend.position = c(0.9, 0.2),
+        plot.title = element_text(face = "bold"))
+```
+
+### Interactive Maps
+
+We use the `leaflet` package to make interactive maps. [Leaflet](https://leafletjs.com/) is a JavaScript library, but the `leaflet` R package allows making interactive maps using R. Use of leaflet somewhat mimics how we use ggplot.
+
+* Start with `leaflet()` (instead of `ggplot()`)
+* Add spatial layers, defining type of layer (similar to geometries)
+
+:::{.callout-note}
+We can spent lots of time going over what we can done with leaflet - but that would take up too much time. [This resource](https://rstudio.github.io/leaflet/articles/colors.html) provides helpful tutorials for things like:
+
+* Changing the basemap 
+* Adding colors
+* Adding a legend
+* And much more!
+:::
+
+__Basic Map__
+
+```{r}
+leaflet() %>%
+  addTiles() %>% # Basemap
+  addPolygons(data = adm1_sf)
+```
+
+
+__Add Multiple Layers__
+
+```{r}
+trunk_sf <- roads_sf %>%
+  filter(highway == "trunk")
+
+leaflet() %>%
+  addTiles() %>% 
+  addPolygons(data = adm1_sf, fillOpacity = 0.1) %>%
+  addPolylines(data = road_sf, color = "black") %>%
+  addCircles(data = gf_sf, color = "red")
+```
+
+## Vector Data: Spatial Operations on 1 Dataset
+
+* `st_buffer()`: Buffer point/line/polygon
+* `st_union()`: Dissolve by attribute (resolving boundaries)
+* `st_combine()`: Dissolve by attribute (without resolving boundaries). Faster than `st_union()`, but can lead to issues.
+* `st_transform()`: Transform CRS
+* `st_centroid()`: Create new sf object that uses the centroid
+* `st_drop_geometry()`: Drop geometry; convert from sf to dataframe
+* `st_bbox()`: Get bounding box
+
+### Buffer
+
+```{r}
+gf_5km_sf <- gf_sf %>% st_buffer(dist = 5000)
+```
+
+### Combine/Union
+
+```{r}
+adm2_sf <- read_sf(here("data", "gadm", "nga_adm2.geojson"), quiet = T)
+
+adm1_combine_sf <- adm2_sf %>% 
+  group_by(NAME_1) %>%
+  summarise(geometry = st_combine(geometry)) %>%
+  ungroup()
+
+adm1_union_sf <- adm2_sf %>% 
+  group_by(NAME_1) %>%
+  summarise(geometry = st_union(geometry)) %>%
+  ungroup()
+
+nrow(adm1_combine_sf)
+nrow(adm1_union_sf)
+
+ggplot() +
+  geom_sf(data = adm1_combine_sf, aes(color = "Using: st_combine()"), fill = NA) +
+  geom_sf(data = adm1_union_sf, aes(color = "Using: st_union()"), fill = NA)
+```
+
+### Other functions
+
+```{r otherfunctions1, exercise = T}
+adm2_proj_sf  <- adm2_sf %>% st_transform(crs = 2311)
+adm2_point_sf <- adm2_sf %>% st_centroid()
+adm2_df       <- adm2_sf %>% st_drop_geometry()
+adm2_bbox     <- adm2_sf %>% st_bbox()
+```
+
+## Vector Data: Spatial Operations on 2+ Datasets
+
+* `st_intersects()`: Indicates whether simple features intersect (returns TRUE/FALSE).
+* `st_intersection()`: Cut one spatial object based on another (returns spatial object).
+* `st_difference()`: Remove part of spatial object based on another.  
+* `st_distance()`: Calculate distances.
+* `st_join()`: Spatial join (ie, add attributes of one dataframe to another based on location). 
+
+### Intersects
+```{r}
+roads_sf <- read_sf(here("data", "osm", "roads_nga_main.geojson"), quiet = T)
+
+# Matrix of T/F. apply(1, max) shows if adm1_sf intersects with any major roads
+st_intersects(adm1_sf, roads_sf, sparse = F) %>% apply(1, max)
+```
+
+### Intersection
+```{r}
+delta_sf <- adm1_sf %>% filter(NAME_1 == "Delta")
+gf_delta_sf <- st_intersection(gf_sf, delta_sf)
+
+ggplot() +
+  geom_sf(data = delta_sf, color = "red") +
+  geom_sf(data = gf_delta_sf)
+```
+
+### Difference
+```{r}
+gf_notdelta_sf <- st_difference(gf_sf, delta_sf)
+
+ggplot() +
+  geom_sf(data = delta_sf, color = "red") +
+  geom_sf(data = gf_notdelta_sf)
+```
+
+### Other Functions
+```{r otherfunctions2, exercise = T}
+gf_adminfo_sf    <- st_join(gf_sf, adm1_sf)
+adm1_sf$dist_gf_m <- st_distance(adm1_sf, gf_sf) %>% apply(1, min)
+```
 
 ## Raster Data
 
-## BlackMarbler
+_1 Band_
+```{r}
+ntl_r <- rast(file.path(here("data", "ntl_blackmarble", "nigeria",
+                             "VNP46A4_NearNadir_Composite_Snow_Free_qflag_t2024.tif")))
 
-### Overview
+ntl_r
+```
+
+_Multiple bands_ in individual tif
+```{r}
+ntl_m_r <- rast(file.path(here("data", "ntl_blackmarble", "nigeria",
+                               "VNP46A4_all.tif")))
+
+ntl_m_r
+```
+
+_Multiple bands_ Load multiple bands from multiple tif files
+```{r}
+ntl_m_r <- file.path(here("data", "ntl_blackmarble", "nigeria")) %>%
+  list.files(full.names = T,
+             pattern = "*.tif") %>%
+  str_subset("VNP46A4") %>% # Annual files
+  str_subset("20") %>% # Individual annual files (2012, 2013, etc)
+  rast()
+
+ntl_m_r
+
+ntl_m_r[[1]]
+```
+
+### Raster Algebrea
+
+```{r}
+ntl_p1_r   <- ntl_r + 1            # Add
+ntl_t5_r   <- ntl_r * 5            # Multiply
+ntl_bin_r  <- ntl_r >= 10          # Make binary
+
+ntl_log_r  <- log(ntl_r)           # Log
+ntl_log_r[ntl_log_r == -Inf] <- NA # Replace values (Log of 0 is -Inf)
+
+ntl_m_log_r  <- log(ntl_m_r)           # Log
+ntl_m_log_r[ntl_m_log_r == -Inf] <- NA # Replace values (Log of 0 is -Inf)
+
+ntl_mean_r <- (ntl_m_r[[1]] + ntl_m_r[[2]])/2 # Add and divide
+```
+
+### Static Maps
+
+__Simple Plot__
+
+```{r}
+plot(ntl_log_r)
+```
+
+__Simple Plot__
+
+```{r}
+plot(ntl_m_log_r)
+```
+
+__Using ggplot__
+
+We use `ggplot` and the `tidyterra` package, which brings `geom_spatraster` for plotting rasters
+
+```{r}
+ggplot() +
+  geom_spatraster(data = ntl_r) +
+  scale_fill_distiller(palette = "YlOrRd",
+                       na.value = "black",
+                       trans = "log" ) +
+  labs(fill = "Radiance") +
+  theme_void()
+```
+
+### Interactive Maps
+
+In `leaflet()`, we can use `addRasterImage()` to plot raster files.
+
+```{r}
+pal <- colorNumeric("YlOrRd", values(ntl_log_r), na.color = "transparent")
+
+leaflet() %>%
+  addTiles() %>%
+  addRasterImage(ntl_log_r, colors = pal, opacity = 0.8)
+```
+
+### Cropping & Masking with Polygon
+
+* `crop()`: Restricts raster to bounding box of polygon
+* `mask()`: Sets values to `NA` that are outside of the polygon
+* `mask(inverse = T)`: Sets values to `NA` that are _inside_ of the polygon
+
+__Crop__
+```{r crop, exercise = T}
+adm0_sf <- read_sf(here("data", "gadm", "nga_adm0.geojson"), quiet = T)
+ntl_r <- rast(file.path(here("data", "ntl_blackmarble", "nigeria",
+                             "VNP46A4_NearNadir_Composite_Snow_Free_qflag_t2024.tif")))
+
+ntl_crop_r <- crop(ntl_r, adm0_sf)
+
+plot(ntl_log_crop_r)
+```
+
+__Mask__
+```{r mask, exercise = T}
+adm0_sf <- read_sf(here("data", "gadm", "nga_adm0.geojson"), quiet = T)
+ntl_r <- rast(file.path(here("data", "ntl_blackmarble", "nigeria",
+                             "VNP46A4_NearNadir_Composite_Snow_Free_qflag_t2024.tif")))
+
+ntl_mask_r <- mask(ntl_log_r, adm0_sf)
+
+plot(ntl_log_mask_r)
+```
+
+__Mask, Inverse__
+```{r mask_inv, exercise = T}
+adm0_sf <- read_sf(here("data", "gadm", "nga_adm0.geojson"), quiet = T)
+ntl_r <- rast(file.path(here("data", "ntl_blackmarble", "nigeria",
+                             "VNP46A4_NearNadir_Composite_Snow_Free_qflag_t2024.tif")))
+
+ntl_mask_inv_r <- mask(ntl_log_r, adm0_sf, inverse = T)
+
+plot(ntl_mask_inv_r)
+```
+
+### Zonal Statistics
+
+__Using [terra::extract](https://rspatial.github.io/terra/reference/extract.html)__
+```{r}
+adm1_sf$ntl_v1 <- terra::extract(ntl_r, adm1_sf, fun = "sum")$t2024 
+```
+
+__Using [exactextractr::exact_extract]()__
+```{r}
+adm1_sf$ntl_v2 <- exact_extract(ntl_r, adm1_sf, fun = "sum", progress = F)
+
+head(adm1_sf)
+```
+
+__Multiple stats__
+```{r}
+ntl_stat_df <- exact_extract(ntl_r, adm1_sf, 
+                             fun = c("sum",
+                                     "max",
+                                     "quantile"), 
+                             quantiles = c(0.05, 0.95),
+                             progress = F)
+
+head(ntl_stat_df)
+```
+
+__Raster stack__
+```{r}
+ntl_m_df <- exact_extract(ntl_m_r, adm1_sf, fun = "sum", progress = F)
+
+head(ntl_m_df)
+```
+
+__Exercise: Make a map of the sum of NTL at the ADM 2 level__
+```{r ntl_map_1, exercise = T}
+adm2_sf <- read_sf(here("data", "gadm", "nga_adm2.geojson"), quiet = T)
+ntl_r <- rast(file.path(here("data", "ntl_blackmarble", "nigeria",
+                             "VNP46A4_NearNadir_Composite_Snow_Free_qflag_t2024.tif")))
+
+
+```
+
+<details>
+ <summary style="color: blue; text-decoration: underline; cursor: pointer;">
+    Click to see solution
+  </summary>
+```{r}
+adm2_sf <- read_sf(here("data", "gadm", "nga_adm2.geojson"), quiet = T)
+ntl_r <- rast(file.path(here("data", "ntl_blackmarble", "nigeria",
+                             "VNP46A4_NearNadir_Composite_Snow_Free_qflag_t2024.tif")))
+
+adm2_sf$ntl_sum <- exact_extract(ntl_r, adm2_sf, fun = "sum", progress = F)
+
+ggplot() +
+  geom_sf(data = adm2_sf,
+          aes(fill = log(ntl_sum+1)),
+          color = NA) +
+  labs(fill = "Log Radiance") +
+  scale_fill_viridis_c(option = "magma") +
+  theme_void()
+```
+</details>
+
+## BlackMarbleR: Overview
+
+__Black Marble Products__
+
+The BlackMarbleR package facilitates retrieving and working with nighttime lights data from [NASA Black Marble](https://blackmarble.gsfc.nasa.gov/). Black Marble produces a number of nighttime light products, from daily, monthly, to annual composites.
+
+![](images/bm_products.png){width=75%}
+
+__Why BlackMarbleR?__
+
+The above image notes that produces are available via the NASA LAADS Archive. Within the archive, raw nighttime lights data are separated by (1) time and (2) tile. The below image shows a screenshot from the archive---showing raw files for January 2024.
+
+![](images/nasa_laads.png){width=75%}
+
+In some cases, our region of interest to examine nighttime lights crosses multiple tiles. For example, 4 tiles comprise Nigeria Consequently, to examine annual trends in nighttime lights for Kenya, for each year we'd need to download 4 tiles and mosaic them together. Doing this manually can be time consuming. The `BlackMarbleR` package does this all for us.
+
+### Package overview
+
+The [documentation](https://github.com/worldbank/blackmarbler) for BlackMarbleR contains more extended documentation. This section provides a brief overview of functions and key inputs. 
+
+__Functions__
+
+The `blackmarbler` package contains two main functions:
+
+* `bm_raster` For retrieving rasters of nighttime lights for a given region of interest
+* `bm_extract` For retrieving zonal statistics (sum, mean, etc) of nighttime lights for a given region of interest.
+
+__Required arguments__
+
+Below are the main, required arguments to the functions:
+
+* `roi_sf`: sf object defining region of interest (sf polygon)
+* `product_id`: Black Marble product ID
+- `"VNP46A1"`: Daily (raw)
+- `"VNP46A2"`: Daily (corrected)
+- `"VNP46A3"`: Monthly
+- `"VNP46A4"`: Annual
+* `date`: Date to query (can be one or multiple dates).
+* `bearer`: NASA bearer token. For instructions on how to create a token, see [here](https://github.com/worldbank/blackmarbler#bearer-token-).
+
+__Additional arguments__
+
+Below are select optional arguments; for all arguments, see documentation [here](https://github.com/worldbank/blackmarbler).
+
+* `variable`: The variable to use for nighttime lights. For monthly and annual data (`VNP46A3` and `VNP46A4`) the default is `"NearNadir_Composite_Snow_Free"`. 
+* `quality_flag_rm`: Quality flag used to set values to `NA`. For examples using the quality variable, see [here](https://worldbank.github.io/blackmarbler/articles/assess-quality.html).
+* `output_location_type`: Either `"r_memory"` or `"file"`. 
+- `"r_memory"`: Data is only load into R memory.
+- `"file"`: File (raster or dataframe) is saved locally; data is also load into R memory.
+* `file_dir`: When `output_location_type = "file"`, the directory where to save the data.
+* `aggregation_fun`: For `bm_extract`, a vector of functions to aggregate data (default: `"mean"`).
 
 ### Usage
 
-## BlackMarble Exercises
+__bm_raster()__
 
+```{r usage1, exercise = T}
 
+# Load ADM
+adm0_sf <- read_sf(here("data", "gadm", "nga_adm0.geojson"), quiet = T)
+
+# Raster, where gap filled removed
+ntl_r <- bm_raster(
+  roi_sf = nga_1_sf,
+  product_id = "VNP46A3",
+  date = "2024-01-01",
+  bearer = bearer,
+  output_location_type = "file",
+  file_dir = file.path(here("data", "ntl_blackmarble", "nigeria"))
+)
+
+plot(adm0_sf)
+```
+
+__bm_extract()__
+
+```{r usage1, exercise = T}
+
+# Load ADM
+adm1_sf <- read_sf(here("data", "gadm", "nga_adm1.geojson"), quiet = T)
+
+# Raster, where gap filled removed
+ntl_df <- bm_extract(
+  roi_sf = adm1_sf,
+  product_id = "VNP46A4",
+  date = 2012:2024,
+  bearer = bearer,
+  output_location_type = "file",
+  file_dir = file.path(here("data", "ntl_blackmarble", "nigeria")),
+  aggregation_fun = "sum"
+)
+
+head(ntl_df)
+```
+
+## BlackMarbleR: Exercise 1 [Quality Check]
+
+__Exercise:__ Create a raster of NTL for January 2024, removing gap filled pixels. Calculate the proportion of non-NA pixels in each ADM2.
+```{r qualitycheck, exercise = T}
+
+# Load ADM
+adm2_sf <- read_sf(here("data", "gadm", "nga_adm2.geojson"), quiet = T)
+
+# Raster, where gap filled removed
+ntl_r <- bm_raster(
+  roi_sf = nga_1_sf,
+  product_id = "VNP46A3",
+  date = "2024-01-01",
+  bearer = bearer,
+  output_location_type = "file",
+  file_dir = file.path(here("data", "ntl_blackmarble", "nigeria")),
+  variable = "NearNadir_Composite_Snow_Free",
+  quality_flag_rm = 2
+)
+
+# All non-NA pixels = 1
+ntl_r[!is.na(ntl_r)] <- 1
+ntl_r[is.na(ntl_r)] <- 0
+```
+
+## BlackMarbleR: Exercise 2 [NTL in/excluding gas flaring]
+
+## BlackMarbleR: Exercise 3 [Hurricane Maria]
 

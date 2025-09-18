@@ -578,17 +578,19 @@ st_bbox(city_sf)
 
 ## Spatial Operations on 2 Datasets
 
-* `st_intersects`: Indicates whether simple features intersect.
-* `st_intersection`: Cut one spatial object based on another.
-* `st_difference`: Remove part of spatial object based on another.  
-* `st_distance`: Calculate distances.
-* `st_join`: Spatial join (ie, add attributes of one dataframe to another based on location). 
+* `st_intersects()`: Indicates whether simple features intersect (returns TRUE/FALSE).
+* `st_intersection()`: Cut one spatial object based on another (returns spatial object).
+* `st_difference()`: Remove part of spatial object based on another.  
+* `st_distance()`: Calculate distances.
+* `st_join()`: Spatial join (ie, add attributes of one dataframe to another based on location). 
 
 ### Determine if objects intersect
 
 `st_intersects` is used to determine whether a spatial object intersects with another (returning T/F). By default, a sparse matrix is returned; setting `sparse = FALSE` returns a dense matrix. Below we determine which motorway segments intersection with Langata or Roysambu.
 
 ```{r}
+st_intersects(adm_sf, roads_sf, sparse = T)
+
 ## Filter
 motor_sf <- roads_sf %>%
   filter(highway == "motorway")
