@@ -24,9 +24,9 @@ website:
         - trainings/01_spatial_analysis_review.qmd
         - trainings/03_intro_blackmarbler.qmd
         - trainings/03_spatial_analysis_blackmarbler.qmd
-    - title: "Diagnostics"
-      contents:
-        - ntl-diagnostic-code/ntl-diagnostics.qmd
+    # - title: "Diagnostics"
+    #   contents:
+    #     - ntl-diagnostic-code/ntl-diagnostics.qmd
 
 format:
   html:
