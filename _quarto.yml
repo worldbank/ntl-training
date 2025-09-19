@@ -9,9 +9,9 @@ website:
   repo-url: "https://github.com/worldbank/ntl-training"
   
   navbar:
-    title: "NTL Training"
+    title: "Monitoring Economies with Nightlights"
     left:
-      - href: index.qmd
+      - href: README.md
         text: Home
       - href: trainings/
         text: Training Materials
@@ -19,7 +19,7 @@ website:
         text: Country Diagnostics
     
   sidebar:
-    - title: "Training Materials"
+    - title: "Using BlackMarbleR"
       contents:
         - trainings/01_spatial_analysis_review.qmd
         - trainings/03_intro_blackmarbler.qmd

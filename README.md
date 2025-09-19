@@ -1,3 +1,7 @@
+---
+title: "Monitoring Economies from Space Using Nighttime Lights"
+---
+
 # Monitoring Economies from Space Using Nighttime Lights
 
 ## Background

@@ -47,12 +47,31 @@ jobs:
             any::sf
             any::terra
             any::leaflet
+            any::leaflet.providers
             any::ggplot2
             any::dplyr
+            any::tidyverse
+            any::lubridate
+            any::here
+            any::usethis
             any::blackmarbler
             any::osmdata
             any::geodata
             any::exactextractr
+            any::readr
+            any::readxl
+            any::janitor
+            any::scales
+            any::viridis
+            any::RColorBrewer
+            any::DT
+            any::plotly
+            any::htmlwidgets
+            any::ggpubr
+            any::tidyterra
+            any::gtools
+            any::WDI
+            any::kableExtra
           cache-version: 2
 
       - name: Render Quarto Project
