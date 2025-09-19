@@ -13,20 +13,20 @@ website:
     left:
       - href: README.md
         text: Home
-      - href: trainings/
-        text: Training Materials
-      - href: ntl-diagnostic-code/
-        text: Country Diagnostics
+      # - href: trainings/
+      #   text: Training Materials
+      # - href: ntl-diagnostic-code/
+      #   text: Country Diagnostics
     
-  sidebar:
-    - title: "Using BlackMarbleR"
-      contents:
-        - trainings/01_spatial_analysis_review.qmd
-        - trainings/03_intro_blackmarbler.qmd
-        - trainings/03_spatial_analysis_blackmarbler.qmd
-    # - title: "Diagnostics"
-    #   contents:
-    #     - ntl-diagnostic-code/ntl-diagnostics.qmd
+  # sidebar:
+  #   - title: "Using BlackMarbleR"
+  #     contents:
+  #       - trainings/01_spatial_analysis_review.qmd
+  #       - trainings/03_intro_blackmarbler.qmd
+  #       - trainings/03_spatial_analysis_blackmarbler.qmd
+  #   - title: "Diagnostics"
+  #     contents:
+  #       - ntl-diagnostic-code/ntl-diagnostics.qmd
 
 format:
   html:
