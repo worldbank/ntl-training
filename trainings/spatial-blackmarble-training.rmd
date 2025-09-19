@@ -19,6 +19,8 @@ library(leaflet)
 library(blackmarbler)
 library(tidyterra)
 library(exactextractr)
+library(h3jsr)
+library(fixest)
 library(here)
 
 tutorial_options(
@@ -42,11 +44,33 @@ knitr::opts_chunk$set(error = TRUE)
 
 There are two main types of spatial data: (1) __vector data__ and (2) __raster data__.
 
-|       | Vector Data | Raster Data|
-| ----- | ----- | ----- |
-| What  | Points, lines, or polygons | Spatially referenced grid |
-| Common file formats | Shapefiles (.shp), geojsons (.geojson) | Geotif (.tif), NetCDF files |
-| Examples | Polygons of countries, polylines of roads, points of schools | Satellite imagery |
+<table style="border-collapse: collapse; width: 100%;">
+<thead>
+<tr>
+<th style="border: 1px solid black;"></th>
+<th style="border: 1px solid black;">Vector Data</th>
+<th style="border: 1px solid black;">Raster Data</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="border: 1px solid black;"><strong>What</strong></td>
+<td style="border: 1px solid black;">Points, lines, or polygons</td>
+<td style="border: 1px solid black;">Spatially referenced grid</td>
+</tr>
+<tr>
+<td style="border: 1px solid black;"><strong>Common file formats</strong></td>
+<td style="border: 1px solid black;">Shapefiles (.shp), geojsons (.geojson)</td>
+<td style="border: 1px solid black;">Geotif (.tif), NetCDF files</td>
+</tr>
+<tr>
+<td style="border: 1px solid black;"><strong>Examples</strong></td>
+<td style="border: 1px solid black;">Polygons of countries, polylines of roads, points of schools</td>
+<td style="border: 1px solid black;">Satellite imagery</td>
+</tr>
+</tbody>
+</table>
+
 
 <table>
 <tr>
@@ -74,9 +98,9 @@ There are two main types of spatial data: (1) __vector data__ and (2) __raster d
 
 ![](images/geo_proj_crs.png)
 
-#### Geographic Coordinate Systems
+### Geographic Coordinate Systems
 
-##### Overview
+#### Overview
 
 __Units:__ Defined by latitude and longitude, which measure angles and units are typically in decimal degrees. (Eg, angle is latitude from the equator).
 
@@ -90,7 +114,7 @@ __Latitude & Longitude:__
 
 ![](images/longlat.png)
 
-##### Distance on a sphere
+#### Distance on a sphere
 
 * At the equator (latitude = 0), a 1 decimal degree longitude distance is about 111km; towards the poles (latitude = -90 or 90), a 1 decimal degree longitude distance converges to 0 km. 
 * We must be careful (ie, use algorithms that account for a spherical earth) to calculate distances! The distance along a sphere is referred to as a [great circle distance](https://en.wikipedia.org/wiki/Great-circle_distance).
@@ -103,7 +127,7 @@ __Latitude & Longitude:__
 </tr>
 </table>
 
-##### Datums
+#### Datums
 
 * __Is the earth flat?__ No!
 * __Is the earth a sphere?__ No!
@@ -122,7 +146,7 @@ The earth is a lumpy ellipsoid, a bit flattened at the poles.
 </tr>
 </table>
 
-#### Projected Coordinate Systems
+### Projected Coordinate Systems
 
 Projected coordinate systems project spatial data from a 3D to 2D surface.
 
@@ -145,13 +169,13 @@ __Datums still relevant:__ Projections start from some representation of the ear
 </tr>
 </table>
 
-#### Referencing Coordinate Reference Systems
+### Referencing Coordinate Reference Systems
 
 * There are many ways to reference coordinate systems, some of which are verbose. 
 * __PROJ__ (Library for projections) way of referencing WGS84 `+proj=longlat +datum=WGS84 +no_defs +type=crs`
 * __[EPSG](https://epsg.io/)__ Assigns numeric code to CRSs to make it easier to reference. Here, WGS84 is `4326`. 
 
-#### CRS as Units
+### CRS as Units
 
 Whenever have spatial data, need to know which coordinate reference system (CRS) the data is in.
 
@@ -159,7 +183,7 @@ Whenever have spatial data, need to know which coordinate reference system (CRS)
 * You would say __“I am 5 [miles / kilometers / minutes / hours] away”__ (units!)
 * Similarly, a “complete” way to describe location would be: I am at __6.51 latitude, 3.52 longitude using the WGS 84 CRS__
 
-#### Quiz
+### Quiz
 
 Explain what's going on here.
 
@@ -176,13 +200,13 @@ There are many packages for working with spatial data. Below summarizes some of 
 * [tidyterra](https://dieghernan.github.io/tidyterra/): Provides methods common to tidyverse for working with terra objects; also provides additional geoms for plotting spatial data using `ggplot`
 * [leaflet](https://rstudio.github.io/leaflet/) R interface to leaflet, a JavaScript library for interactive maps
 
-:::{.callout-note}
-Before `sf`, the `sp` package was used; before `terra`, the `raster` package was used. When googling/asking AI about spatial data analysis in R, you may come across these packages. Answers using these packages may be out of date. In particular, the `sp` package handles spatial data notably different than `sf`. 
-
-* `sp` objects are similar to `shapefiles`; a shapefile isn't one file, it's a collection of files---one file contains the geometries (shapes), another contains the CRS, another contains the data, etc. Similarly, `sp` files were a list---one item of the list contained the geometries (shapes), another item contained the CRS, etc. 
-
-* `sf` objects are set up more similar to `geojsons`, where each row of the dataframe has a geometry column.
-:::
+<div class="alert alert-info">
+<strong>Note:</strong> Before <code>sf</code>, the <code>sp</code> package was used; before <code>terra</code>, the <code>raster</code> package was used. When googling/asking AI about spatial data analysis in R, you may come across these packages. Answers using these packages may be out of date. In particular, the <code>sp</code> package handles spatial data notably different than <code>sf</code>.
+<ul>
+<li><code>sp</code> objects are similar to <code>shapefiles</code>; a shapefile isn't one file, it's a collection of files—one file contains the geometries (shapes), another contains the CRS, another contains the data, etc. Similarly, <code>sp</code> files were a list—one item of the list contained the geometries (shapes), another item contained the CRS, etc.</li>
+<li><code>sf</code> objects are set up more similar to <code>geojsons</code>, where each row of the dataframe has a geometry column.</li>
+</ul>
+</div>
 
 ### Spherical Geometry in s2 
 
@@ -190,13 +214,13 @@ Often, spatial data comes in the WGS 84 CRS (EPSG:4326). This is a geographic/sp
 
 The s2 library uses a system of spatial grids and relies on great circle distance formula for distance calculations; for more information, see [here](http://s2geometry.io/about/overview). While the sf package uses s2 by default, it can be turned off using `sf_use_s2(false)` (but use caution when doing so).
 
-:::{.callout-note}
-Instead of relying on s2, there are two other common ways of computing distances/areas.
-
-* __Project data:__ One approach is to project the data, so that the data is represented on a 2-dimensional surface and where the units are something like meters (meters are a common unit for projected CRS, but not always used; some US projected CRSs use feet). When projected, we can rely on standard formula for calculating distances/areas---such as the distance formula for distances. However, this approach requires picking a projected CRS that is accurate for the location.
-
-* __Spherical Trigonometry:__ One approach to stay on a geographic CRS and use more advanced equations that account for being on a sphere. For example, for calculating distances, a number of [great circle distance](https://en.wikipedia.org/wiki/Great-circle_distance#:~:text=The%20great%2Dcircle%20distance%2C%20orthodromic,the%20surface%20of%20the%20sphere.) formulas exist---such as the [Haversine Formula](https://en.wikipedia.org/wiki/Haversine_formula), [Vincenty's Formula](https://en.wikipedia.org/wiki/Vincenty%27s_formulae), etc. The [geosphere](https://github.com/rspatial/geosphere) package facilitates using these. However, these formula can be slow to implement for large numbers of observations. The `s2` library does rely on these formula; however, it uses them in combination with other methods.
-:::
+<div class="alert alert-info">
+<strong>Note:</strong> Instead of relying on s2, there are two other common ways of computing distances/areas.
+<ul>
+<li><strong>Project data:</strong> One approach is to project the data, so that the data is represented on a 2-dimensional surface and where the units are something like meters (meters are a common unit for projected CRS, but not always used; some US projected CRSs use feet). When projected, we can rely on standard formula for calculating distances/areas—such as the distance formula for distances. However, this approach requires picking a projected CRS that is accurate for the location.</li>
+<li><strong>Spherical Trigonometry:</strong> One approach to stay on a geographic CRS and use more advanced equations that account for being on a sphere. For example, for calculating distances, a number of <a href="https://en.wikipedia.org/wiki/Great-circle_distance#:~:text=The%20great%2Dcircle%20distance%2C%20orthodromic,the%20surface%20of%20the%20sphere.">great circle distance</a> formulas exist—such as the <a href="https://en.wikipedia.org/wiki/Haversine_formula">Haversine Formula</a>, <a href="https://en.wikipedia.org/wiki/Vincenty%27s_formulae">Vincenty's Formula</a>, etc. The <a href="https://github.com/rspatial/geosphere">geosphere</a> package facilitates using these. However, these formula can be slow to implement for large numbers of observations. The <code>s2</code> library does rely on these formula; however, it uses them in combination with other methods.</li>
+</ul>
+</div>
 
 ## Vector Data: Basics
 
@@ -205,7 +229,7 @@ __Summary of functions__
 
 * `st_as_sf()`: Convert dataframe to sf object
 * `read_sf()`: Read spatial file
-* `st_crs()`: Check CRS
+* `st_crs()`: Get CRS of sf object (can also be used to assign, eg `st_crs(OBJECT) = 4326`; but use carefully)
 * `st_geometry_type()`: Check geometry type
 * `st_area()`: Determine area of polygon
 * `st_length()`: Determine length of polyline
@@ -216,7 +240,8 @@ __Summary of functions__
 Here we load a csv file that has latitude and longitude information. We can convert this to a spatial file using the `st_as_sf()` function. We know from the data metadata that the data is in ESPG:4326
 
 ```{r}
-gf_df <- read_csv(here("data", "gas_flaring", "finaldata", "gas_flaring_nga.csv"))
+gf_df <- read_csv(here("data", "gas_flaring", "finaldata", "gas_flaring_nga.csv"),
+                  show_col_types = F)
 
 head(gf_df)
 ```
@@ -230,8 +255,6 @@ head(gf_sf)
 ```
 
 ### Polygons & Polylines
-
-* geom_sf(): Used with ggplot(); plot sf objects
 
 __Load data__
 ```{r}
@@ -288,11 +311,17 @@ roads_sf <- read_sf(here("data", "osm", "roads_nga_main.geojson"), quiet = T)
 
 ## Vector Data: Mapping
 
+__Summary of functions__
+
+* `ggplot() + geom_sf()` to add sf objects
+* `leaflet() + addTiles() + addPolygons()` interactive maps, polygons
+* `leaflet() + addTiles() + addPolylines()` interactive maps, polylines
+* `leaflet() + addTiles() + addCircles()` interactive maps, points
+
 ### Static Maps
 
 __Static plot using geom_sf__
 
-#### Simple
 ```{r}
 ggplot() +
   geom_sf(data = adm1_sf)
@@ -307,7 +336,25 @@ ggplot() +
   geom_sf(data = gf_sf)
 ```
 
-#### Fill by Area
+### Fill by Area
+
+__Exercise__
+
+Update `ggplot() + geom_sf(data = adm1_sf)` to fill the polygons with `"area_m2"` (hint: use `aes(fill = area_m2)`)
+
+```{r fill_polygon, exercise = T}
+adm1_sf <- read_sf(here("data", "gadm", "nga_adm1.geojson"), quiet = T)
+
+adm1_sf <- adm1_sf %>%
+  mutate(area_m2 = geometry %>% st_area() %>% as.numeric())
+
+ggplot() +
+  geom_sf(data = adm1_sf)
+
+```
+
+<details>
+<summary>Click to see solution</summary>
 ```{r}
 ggplot() +
   geom_sf(data = adm1_sf, 
@@ -321,6 +368,7 @@ ggplot() +
   theme(legend.position = c(0.9, 0.2),
         plot.title = element_text(face = "bold"))
 ```
+</details>
 
 ### Interactive Maps
 
@@ -329,14 +377,15 @@ We use the `leaflet` package to make interactive maps. [Leaflet](https://leaflet
 * Start with `leaflet()` (instead of `ggplot()`)
 * Add spatial layers, defining type of layer (similar to geometries)
 
-:::{.callout-note}
-We can spent lots of time going over what we can done with leaflet - but that would take up too much time. [This resource](https://rstudio.github.io/leaflet/articles/colors.html) provides helpful tutorials for things like:
-
-* Changing the basemap 
-* Adding colors
-* Adding a legend
-* And much more!
-:::
+<div class="alert alert-info">
+<strong>Note:</strong> We can spent lots of time going over what we can done with leaflet - but that would take up too much time. <a href="https://rstudio.github.io/leaflet/articles/colors.html">This resource</a> provides helpful tutorials for things like:
+<ul>
+<li>Changing the basemap</li>
+<li>Adding colors</li>
+<li>Adding a legend</li>
+<li>And much more!</li>
+</ul>
+</div>
 
 __Basic Map__
 
@@ -346,19 +395,57 @@ leaflet() %>%
   addPolygons(data = adm1_sf)
 ```
 
+### Interactive map with multiple layers 
 
-__Add Multiple Layers__
+__Exercise__
 
+Make an interactive map with that shows:
+
+1. ADM2 polygons (`adm1_sf`)
+2. Trunk roads (`roads_sf`, but where `highway` is `trunk`)
+3. Gas flare locations (`gf_sf`)
+
+__Hint:__ Use all three of: `addPolygons()`, `addPolylines()`, and `addCirlces()`
+
+```{r leaflet_ex, exercise = T}
+roads_sf <- read_sf(here("data", "osm", "roads_nga_main.geojson"), quiet = T)
+adm1_sf  <- read_sf(here("data", "gadm", "nga_adm1.geojson"), quiet = T)
+gf_df   <- read_csv(here("data", "gas_flaring", "finaldata", "gas_flaring_nga.csv"),
+                    show_col_types = F)
+
+#### Spatiall define Gas Flaring
+gf_sf <- gf_df %>%
+  st_as_sf(coords = c("longitude", "latitude"),
+           crs = 4326)
+
+
+```
+
+<details>
+<summary>Click to see solution</summary>
 ```{r}
+roads_sf <- read_sf(here("data", "osm", "roads_nga_main.geojson"), quiet = T)
+adm1_sf  <- read_sf(here("data", "gadm", "nga_adm1.geojson"), quiet = T)
+gf_df   <- read_csv(here("data", "gas_flaring", "finaldata", "gas_flaring_nga.csv"),
+                    show_col_types = F)
+
+#### Spatiall define Gas Flaring
+gf_sf <- gf_df %>%
+  st_as_sf(coords = c("longitude", "latitude"),
+           crs = 4326)
+
+#### Filter roads to trunk roads
 trunk_sf <- roads_sf %>%
   filter(highway == "trunk")
 
+#### Map
 leaflet() %>%
   addTiles() %>% 
   addPolygons(data = adm1_sf, fillOpacity = 0.1) %>%
-  addPolylines(data = road_sf, color = "black") %>%
+  addPolylines(data = roads_sf, color = "black") %>%
   addCircles(data = gf_sf, color = "red")
 ```
+</details>
 
 ## Vector Data: Spatial Operations on 1 Dataset
 
@@ -369,11 +456,15 @@ leaflet() %>%
 * `st_centroid()`: Create new sf object that uses the centroid
 * `st_drop_geometry()`: Drop geometry; convert from sf to dataframe
 * `st_bbox()`: Get bounding box
+* `st_make_valid()`: Makes a valid sf object (eg, deals with overlapping geometries)
 
 ### Buffer
 
 ```{r}
 gf_5km_sf <- gf_sf %>% st_buffer(dist = 5000)
+
+ggplot() +
+  geom_sf(data = gf_5km_sf)
 ```
 
 ### Combine/Union
@@ -391,8 +482,7 @@ adm1_union_sf <- adm2_sf %>%
   summarise(geometry = st_union(geometry)) %>%
   ungroup()
 
-nrow(adm1_combine_sf)
-nrow(adm1_union_sf)
+print(paste("N Rows adm1_combine_sf: ", nrow(adm1_combine_sf), "; N Rows adm1_union_sf: ", nrow(adm1_union_sf)))
 
 ggplot() +
   geom_sf(data = adm1_combine_sf, aes(color = "Using: st_combine()"), fill = NA) +
@@ -401,7 +491,11 @@ ggplot() +
 
 ### Other functions
 
+__Exercise: Run code and check outputs. How do they differ from `adm2_sf`?__
+
 ```{r otherfunctions1, exercise = T}
+adm2_sf <- read_sf(here("data", "gadm", "nga_adm2.geojson"), quiet = T)
+
 adm2_proj_sf  <- adm2_sf %>% st_transform(crs = 2311)
 adm2_point_sf <- adm2_sf %>% st_centroid()
 adm2_df       <- adm2_sf %>% st_drop_geometry()
@@ -445,11 +539,102 @@ ggplot() +
 
 ### Other Functions
 ```{r otherfunctions2, exercise = T}
-gf_adminfo_sf    <- st_join(gf_sf, adm1_sf)
+#### Load Data
+adm1_sf <- read_sf(here("data", "gadm", "nga_adm1.geojson"), quiet = T)
+gf_df   <- read_csv(here("data", "gas_flaring", "finaldata", "gas_flaring_nga.csv"),
+                    show_col_types = F)
+
+gf_sf <- gf_df %>%
+  st_as_sf(coords = c("longitude", "latitude"),
+           crs = 4326)
+
+#### Add attributes from adm1_sf to gf_sf
+gf_adminfo_sf     <- st_join(gf_sf, adm1_sf)
+
+#### Calculate distance from adm1_sf to nearest gas flare location
 adm1_sf$dist_gf_m <- st_distance(adm1_sf, gf_sf) %>% apply(1, min)
 ```
 
+### Exercise
+
+__Exercise: Remove gas flaring locations from `adm0_sf`__
+
+* Use `st_difference()`
+* Make a map of `adm0_sf` without gas flares to see output
+
+```{r st_difference_ex, exercise = T}
+#### Load data
+adm0_sf <- read_sf(here("data", "gadm", "nga_adm0.geojson"), quiet = T)
+gf_df   <- read_csv(here("data", "gas_flaring", "finaldata", "gas_flaring_nga.csv"),
+                    show_col_types = F)
+
+#### Spatially define gas flaring
+gf_sf <- gf_df %>%
+  st_as_sf(coords = c("longitude", "latitude"),
+           crs = 4326)
+
+#### Buffer Gas Flares
+gf_buff_sf <- gf_sf %>% st_buffer(dist = DISTANCE) # [CHOOSE DISTANCE HERE!!!]
+
+#### Union
+# Using st_difference works easier if collapse gas flares to one row
+gf_union_sf <- gf_sf %>%
+  st_union() %>% # Make 1 row
+  st_as_sf() # Make feature collection
+
+#### Remove gas flares from adm2_sf
+# [CODE HERE]
+
+#### Map
+
+```
+
+<details>
+<summary>Click to see solution</summary>
+```{r}
+#### Load data
+adm0_sf <- read_sf(here("data", "gadm", "nga_adm0.geojson"), quiet = T)
+gf_df   <- read_csv(here("data", "gas_flaring", "finaldata", "gas_flaring_nga.csv"),
+                    show_col_types = F)
+
+#### Spatially define gas flaring
+gf_sf <- gf_df %>%
+  st_as_sf(coords = c("longitude", "latitude"),
+           crs = 4326)
+
+#### Buffer
+gf_5km_sf <- gf_sf %>% st_buffer(dist = 5000)
+
+#### Union
+# Using st_difference works easier if collapse gas flares to one row
+gf_5km_union_sf <- gf_5km_sf %>%
+  st_union() %>% # Make 1 row
+  st_as_sf() %>% # Make feature collection
+  st_make_valid()
+  
+#### Remove gas flares from adm2_sf
+adm0_nofg_sf <- st_difference(adm0_sf, gf_5km_union_sf)
+
+#### Map
+leaflet() %>%
+  addTiles() %>%
+  addPolygons(data = adm0_nofg_sf) 
+
+```
+</details>
+
 ## Raster Data
+
+__Summary of Functions__
+* `rast()`: Load file (eg, `.tif` file)
+* `plot()`: Basic raster plot
+* `ggplot() + geom_spatraster()`: Static map
+* `leaflet() %>% addTiles() %>% addRasterImage(ntl_log_r)`: Interactive map
+* `crop(r, polygon_sf)`: Restrict raster to bounding box of polygon
+* `mask(r, polygon_sf)`: Set values to `NA` outside of polygon
+* `mask(r, polygon_sf, inverse = T)`: Set values to `NA` inside of polygon
+* `extract(r, polygon_sf, "sum")`: Zonal stats using `terra` package
+* `exact_extract(r, polygon_sf, "sum")`: Zonal stats using `exact_extractr` package (can be faster)
 
 _1 Band_
 ```{r}
@@ -483,7 +668,7 @@ ntl_m_r[[1]]
 
 ### Raster Algebrea
 
-```{r}
+```{r, eval = F}
 ntl_p1_r   <- ntl_r + 1            # Add
 ntl_t5_r   <- ntl_r * 5            # Multiply
 ntl_bin_r  <- ntl_r >= 10          # Make binary
@@ -502,12 +687,18 @@ ntl_mean_r <- (ntl_m_r[[1]] + ntl_m_r[[2]])/2 # Add and divide
 __Simple Plot__
 
 ```{r}
+ntl_log_r  <- log(ntl_r)           
+ntl_log_r[ntl_log_r == -Inf] <- NA 
+
 plot(ntl_log_r)
 ```
 
 __Simple Plot__
 
 ```{r}
+ntl_m_log_r  <- log(ntl_m_r)           # Log
+ntl_m_log_r[ntl_m_log_r == -Inf] <- NA # Replace values (Log of 0 is -Inf)
+
 plot(ntl_m_log_r)
 ```
 
@@ -551,7 +742,7 @@ ntl_r <- rast(file.path(here("data", "ntl_blackmarble", "nigeria",
 
 ntl_crop_r <- crop(ntl_r, adm0_sf)
 
-plot(ntl_log_crop_r)
+plot(log(ntl_crop_r+1))
 ```
 
 __Mask__
@@ -560,9 +751,9 @@ adm0_sf <- read_sf(here("data", "gadm", "nga_adm0.geojson"), quiet = T)
 ntl_r <- rast(file.path(here("data", "ntl_blackmarble", "nigeria",
                              "VNP46A4_NearNadir_Composite_Snow_Free_qflag_t2024.tif")))
 
-ntl_mask_r <- mask(ntl_log_r, adm0_sf)
+ntl_mask_r <- mask(ntl_r, adm0_sf)
 
-plot(ntl_log_mask_r)
+plot(log(ntl_mask_r+1))
 ```
 
 __Mask, Inverse__
@@ -571,12 +762,14 @@ adm0_sf <- read_sf(here("data", "gadm", "nga_adm0.geojson"), quiet = T)
 ntl_r <- rast(file.path(here("data", "ntl_blackmarble", "nigeria",
                              "VNP46A4_NearNadir_Composite_Snow_Free_qflag_t2024.tif")))
 
-ntl_mask_inv_r <- mask(ntl_log_r, adm0_sf, inverse = T)
+ntl_mask_inv_r <- mask(ntl_r, adm0_sf, inverse = T)
 
-plot(ntl_mask_inv_r)
+plot(log(ntl_mask_inv_r+1))
 ```
 
 ### Zonal Statistics
+
+__Zonal statistics__ refers to calculating statistics of raster data within a zone (ie, polygons)
 
 __Using [terra::extract](https://rspatial.github.io/terra/reference/extract.html)__
 ```{r}
@@ -649,10 +842,14 @@ head(ntl_df)
 
 __Exercise: Make a map of the sum of NTL at the ADM 2 level__
 ```{r ntl_map_1, exercise = T}
+#### Load data
 adm2_sf <- read_sf(here("data", "gadm", "nga_adm2.geojson"), quiet = T)
 ntl_r <- rast(file.path(here("data", "ntl_blackmarble", "nigeria",
                              "VNP46A4_NearNadir_Composite_Snow_Free_qflag_t2024.tif")))
 
+#### Extract Sum of NTL
+
+#### Map
 
 ```
 
@@ -661,12 +858,15 @@ ntl_r <- rast(file.path(here("data", "ntl_blackmarble", "nigeria",
 Click to see solution
 </summary>
 ```{r}
+#### Load data
 adm2_sf <- read_sf(here("data", "gadm", "nga_adm2.geojson"), quiet = T)
 ntl_r <- rast(file.path(here("data", "ntl_blackmarble", "nigeria",
                              "VNP46A4_NearNadir_Composite_Snow_Free_qflag_t2024.tif")))
 
+#### Extract Sum of NTL
 adm2_sf$ntl_sum <- exact_extract(ntl_r, adm2_sf, fun = "sum", progress = F)
 
+#### Map
 ggplot() +
   geom_sf(data = adm2_sf,
           aes(fill = log(ntl_sum+1)),
@@ -710,10 +910,10 @@ Below are the main, required arguments to the functions:
 
 * `roi_sf`: sf object defining region of interest (sf polygon)
 * `product_id`: Black Marble product ID
-- `"VNP46A1"`: Daily (raw)
-- `"VNP46A2"`: Daily (corrected)
-- `"VNP46A3"`: Monthly
-- `"VNP46A4"`: Annual
+  - `"VNP46A1"`: Daily (raw)
+  - `"VNP46A2"`: Daily (corrected)
+  - `"VNP46A3"`: Monthly
+  - `"VNP46A4"`: Annual
 * `date`: Date to query (can be one or multiple dates).
 * `bearer`: NASA bearer token. For instructions on how to create a token, see [here](https://github.com/worldbank/blackmarbler#bearer-token-).
 
@@ -724,8 +924,8 @@ Below are select optional arguments; for all arguments, see documentation [here]
 * `variable`: The variable to use for nighttime lights. For monthly and annual data (`VNP46A3` and `VNP46A4`) the default is `"NearNadir_Composite_Snow_Free"`. 
 * `quality_flag_rm`: Quality flag used to set values to `NA`. For examples using the quality variable, see [here](https://worldbank.github.io/blackmarbler/articles/assess-quality.html).
 * `output_location_type`: Either `"r_memory"` or `"file"`. 
-- `"r_memory"`: Data is only load into R memory.
-- `"file"`: File (raster or dataframe) is saved locally; data is also load into R memory.
+  - `"r_memory"`: Data is only load into R memory.
+  - `"file"`: File (raster or dataframe) is saved locally; data is also load into R memory.
 * `file_dir`: When `output_location_type = "file"`, the directory where to save the data.
 * `aggregation_fun`: For `bm_extract`, a vector of functions to aggregate data (default: `"mean"`).
 
@@ -740,15 +940,15 @@ adm0_sf <- read_sf(here("data", "gadm", "nga_adm0.geojson"), quiet = T)
 
 # Raster, where gap filled removed
 ntl_r <- bm_raster(
-  roi_sf = nga_1_sf,
+  roi_sf = adm0_sf,
   product_id = "VNP46A3",
   date = "2024-01-01",
-  bearer = bearer,
+  bearer = "dont-change",
   output_location_type = "file",
   file_dir = file.path(here("data", "ntl_blackmarble", "nigeria"))
 )
 
-plot(adm0_sf)
+plot(log(ntl_r+1))
 ```
 
 __bm_extract()__
@@ -763,16 +963,75 @@ ntl_df <- bm_extract(
   roi_sf = adm1_sf,
   product_id = "VNP46A4",
   date = 2012:2024,
-  bearer = bearer,
+  bearer = "dont-change",
   output_location_type = "file",
-  file_dir = file.path(here("data", "ntl_blackmarble", "nigeria")),
+  file_dir = file.path(here("data", "ntl_blackmarble", "nigeria", "adm1")),
   aggregation_fun = "sum"
 )
 
 head(ntl_df)
 ```
 
+### Exercise
+
+__Exercise: Use `bm_raster` to extract a raster of the quality of NTL for January 2024 (monthly data)__
+
+* The quality variable is: `NearNadir_Composite_Snow_Free_Quality`
+* After extracting the data plot, it.
+* What do the different quality numbers mean?
+
+```{r usage3, exercise = T}
+
+# Load ADM
+adm0_sf <- read_sf(here("data", "gadm", "nga_adm0.geojson"), quiet = T)
+
+# Raster, where gap filled removed
+ntl_r <- bm_raster(
+  roi_sf = adm0_sf,
+  product_id = "VNP46A3",
+  date = "2024-01-01",
+  bearer = "dont-change",
+  output_location_type = "file",
+  variable = "", # SET THIS TO SOMETHING !!!!!
+  file_dir = file.path(here("data", "ntl_blackmarble", "nigeria"))
+)
+
+# Plot
+
+
+```
+
+<details>
+<summary>Click to see solution</summary>
+```{r}
+
+# Load ADM
+adm0_sf <- read_sf(here("data", "gadm", "nga_adm0.geojson"), quiet = T)
+
+# Raster, where gap filled removed
+ntl_r <- bm_raster(
+  roi_sf = adm0_sf,
+  product_id = "VNP46A3",
+  date = "2024-01-01",
+  bearer = "dont-change",
+  output_location_type = "file",
+  variable = "NearNadir_Composite_Snow_Free_Quality",
+  file_dir = file.path(here("data", "ntl_blackmarble", "nigeria"))
+)
+
+# Plot
+plot(ntl_r)
+
+
+```
+</details>
+
 ## BlackMarbleR: Exercise 1 [Gas Flaring in Nigeria]
+
+This exercise involves examining NTL in and outside of gas flare locations in Nigeria. There are two parts:
+
+1. Calculate NTL at ADM2 level (including and excluding gas flares)
+2. Calculate NTL within each gas flare location
 
 ### Part 1: Nighttime lights at ADM2 level
 
@@ -792,7 +1051,8 @@ Decisions to make
 ```{r nga_gf_1, exercise = T, exercise.lines=30}
 #### Load data
 nga0_sf <- read_sf(here("data", "gadm", "nga_adm0.geojson"))
-gf_df   <- read_csv(here("data", "gas_flaring", "finaldata", "gas_flaring_nga.csv"))
+gf_df   <- read_csv(here("data", "gas_flaring", "finaldata", "gas_flaring_nga.csv"),
+                    show_col_types = F)
 
 #### Buffer gas flaring
 gf_sf <- gf_df %>%
@@ -957,7 +1217,8 @@ Calculate the sum of NTL around each gas flaring location in 2024. Using this da
 ```{r nga_gf_2, exercise = T, exercise.lines=30}
 #### Load data
 nga0_sf <- read_sf(here("data", "gadm", "nga_adm0.geojson"))
-gf_df   <- read_csv(here("data", "gas_flaring", "finaldata", "gas_flaring_nga.csv"))
+gf_df   <- read_csv(here("data", "gas_flaring", "finaldata", "gas_flaring_nga.csv"),
+                    show_col_types = F)
 
 #### Buffer gas flaring
 gf_sf <- gf_df %>%
@@ -990,7 +1251,8 @@ Click to see solution
 ```{r}
 #### Load data
 nga0_sf <- read_sf(here("data", "gadm", "nga_adm0.geojson"))
-gf_df   <- read_csv(here("data", "gas_flaring", "finaldata", "gas_flaring_nga.csv"))
+gf_df   <- read_csv(here("data", "gas_flaring", "finaldata", "gas_flaring_nga.csv"),
+                    show_col_types = F)
 
 #### Buffer gas flaring
 gf_sf <- gf_df %>%
@@ -1023,7 +1285,6 @@ gf_5km_sf %>%
   theme_classic()
 
 #### Map
-# TODO: Add basemap
 ggplot() +
   geom_sf(data = gf_5km_sf,
           aes(fill = ntl_sum)) +
@@ -1035,6 +1296,14 @@ ggplot() +
 ## BlackMarbleR: Exercise 2 [Hurricane Maria]
 
 On September 20, 2017, [Hurricane Maria](https://en.wikipedia.org/wiki/Hurricane_Maria)---then a category 4 hurricane---struck Puerto Rico, killing an estimate 3,000 people and leaving significant damage. In this exercise, we'll use nighttime lights to understand earthquake damages & recovery. This exercise has four parts.
+
+1. Calculate monthly trends in NTL before and after the hurricane
+2. Create a map at the ADM1 level showing changes in NTL before and after the hurricane
+3. Create a map at the pixel level showing changes in NTL before and after the hurricane
+4. Assessing whether we can use daily data to understand the immediate damage of the hurricane. This part includes three sub-parts
+  - Make rasters of variables that indicate quality
+  - Check the proportion of daily rasters that are NA
+  - Plot daily NTL
 
 ### Part 1: Monthly Trends
 
@@ -1511,4 +1780,392 @@ latest_df %>%
 
 ## BlackMarbleR: Exercise 3 [New Highway in Pakistan]
 
+The Islamabad-Lahore Motorway (M-2) was upgraded, including resurfacing. We'll use nighttime lights to understand if the road upgrades---and increased mobility from the upgrades---increased economic activity. We'll track nighttime lights near the Islamabad-Lahore Motorway (M-2) and near another road that connects Islamabad and Lahore, the Grand Trunk Road (N-5). This exercise has three parts
+
+1. Make a map of NTL and roads
+2. Make a figure showing trends in NTL near the M-2 and N-5 annually
+3. Estimate a difference-in-difference estimating the impact of the M-2 on nighttime lights
+
+### Part 1: Map of NTL and Roads
+
+Make a map that includes:
+1. Nighttime lights
+2. Roads, with 10km buffer
+
+```{r pak_map, exercise = T, exercise.lines=30}
+#### Load data
+roads_sf <- read_sf(here("data", "osm", "roads_pak_treat_n5_m2.geojson"))
+
+# [CODE TO BUFFER ROADS HERE]
+
+ntl_r <- bm_raster(
+  roi_sf = # BUFFER ROADS HERE,
+    product_id = "VNP46A4",
+  date = 2024,
+  bearer = "dont-change",
+  output_location_type = "file",
+  file_dir = file.path(here("data", "ntl_blackmarble", "pakistan"))
+)
+
+#### MAP
+# [CODE FOR MAP HERE]
+```
+
+<details>
+<summary>Click to see solution</summary>
+```{r}
+#### Load data
+roads_sf <- read_sf(here("data", "osm", "roads_pak_treat_n5_m2.geojson"))
+
+roads_10km_sf <- roads_sf %>% st_buffer(dist = 10000)
+
+ntl_r <- bm_raster(
+  roi_sf = roads_10km_sf,
+  product_id = "VNP46A4",
+  date = 2024,
+  bearer = "dont-change",
+  output_location_type = "file",
+  file_dir = file.path(here("data", "ntl_blackmarble", "pakistan"))
+)
+
+#### Map
+ggplot() +
+  geom_spatraster(data = ntl_r) +
+  scale_fill_viridis_c(trans = "log1p",
+                       option = "magma",
+                       na.value = "white",
+                       name = "Log NTL") +
+  geom_sf(data = roads_10km_sf,
+          aes(color = ref),
+          linewidth = 0.5,
+          fill = NA) +
+  theme_void() +
+  labs(color = "Road\n(10km Buffer)") +
+  scale_color_manual(values = c("dodgerblue", "darkorange"))
+```
+</details>
+
+### Part 2: Average trends along roads
+
+Create a figure that shows annual trends in NTL within 10km of the M-2 and N-5, but that:
+1. Excludes lights within 1km of the roads
+2. Excludes lights within 5km of Islamabad and Lahore
+
+```{r pak_trends, exercise = T, exercise.lines=30}
+#### Load data
+roads_sf <- read_sf(here("data", "osm", "roads_pak_treat_n5_m2.geojson"))
+cities_df <- read_csv(here("data", "cities", "pak_cities.csv"),
+                      show_col_types = F)
+
+cities_sf <- cities_df %>%
+  st_as_sf(coords = c("longitude", "latitude"),
+           crs = 4326) 
+
+#### Buffer polygons
+
+
+#### Get rasters
+ntl_r <- bm_raster(
+  roi_sf = #[INPUT],
+    product_id = #[INPUT],
+    date = #[INPUT],
+    bearer = "dont-change",
+  output_location_type = "file",
+  file_dir = file.path(here("data", "ntl_blackmarble", "pakistan"))
+)
+
+
+```
+
+
+<details>
+<summary>Click to see solution</summary>
+```{r}
+#### Load data
+roads_sf <- read_sf(here("data", "osm", "roads_pak_treat_n5_m2.geojson"))
+cities_df <- read_csv(here("data", "cities", "pak_cities.csv"),
+                      show_col_types = F)
+
+cities_sf <- cities_df %>%
+  st_as_sf(coords = c("longitude", "latitude"),
+           crs = 4326) 
+
+#### Buffer polygons
+roads_10km_sf <- roads_sf %>% st_buffer(dist = 10000)
+roads_1km_sf  <- roads_sf %>% st_buffer(dist = 1000)
+cities_5km_sf <- cities_sf %>% st_buffer(dist = 5000)
+
+#### Get rasters
+ntl_r <- bm_raster(
+  roi_sf = roads_10km_sf,
+  product_id = "VNP46A4",
+  date = 2012:2024,
+  bearer = "dont-change",
+  output_location_type = "file",
+  file_dir = file.path(here("data", "ntl_blackmarble", "pakistan"))
+)
+
+#### Mask out near roads and cities
+ntl_r <- mask(ntl_r, roads_1km_sf, inverse = T)
+ntl_r <- mask(ntl_r, cities_5km_sf, inverse = T)
+
+#### Extract extract needs raster names to be unique
+names(ntl_r) <- paste0("t", 2012:2024)
+
+#### Extract lights and format dataframe
+ntl_df <- exact_extract(ntl_r, roads_10km_sf, "sum", progress = F)
+
+ntl_df$ref <- roads_10km_sf$ref
+
+ntl_clean_df <- ntl_df %>%
+  pivot_longer(cols = -ref) %>%
+  mutate(name = name %>%
+           str_replace_all("sum.t", "") %>%
+           as.numeric()) %>%
+  rename(year = name)
+
+#### Figure
+ntl_clean_df %>%
+  ggplot(aes(x = year,
+             y = value,
+             color = ref)) +
+  geom_vline(xintercept = 2016) +
+  geom_line(linewidth = 1) +
+  labs(x = NULL,
+       y = "NTL Radiance",
+       color = "Road") +
+  scale_color_manual(values = c("gray50", "darkorange")) +
+  theme_classic()
+
+```
+</details>
+
+### Part 3: Diff-in-Diff Regression
+
+Estimate a difference-in-difference regression that estimates the impact of the M-2 road upgrade on nighttime lights, relative to the N-5 road. Specifically, estimate the following regression:
+
+\[
+Y_{it} = \alpha_i + \gamma_t + 
+\sum_{\substack{t=2012 \\ t\neq 2015}}^{2024} 
+\beta_{t} \bigl(D_i \times \mathbf{1}\{ \text{Year}=t \}\bigr)
++ \varepsilon_{it},
+\]
+
+The unit of analysis should be h3 hexagons (resolution 5, edge length of about 10km).
+
+Estimate regressions with the following outcome variables:
+1. Sum of NTL within hexagons
+2. Proportion of NTL > 1 within hexagons
+3. Proportion of NTL > 10 within hexagons
+
+Hexagons should be:
+1. More than 1km from the M-2 or N-5
+2. Within 10km of the M-2 or N-5
+3. More than 5km from Islamabad and Lahore
+
+```{r pak_reg, exercise = T, exercise.lines=50}
+#### Load data
+pak_3_sf <- read_sf(here("data", "gadm", "pak_adm3.geojson"))
+roads_sf <- read_sf(here("data", "osm", "roads_pak_treat_n5_m2.geojson"))
+cities_df <- read_csv(here("data", "cities", "pak_cities.csv"), show_col_types = F)
+
+cities_sf <- cities_df %>%
+  st_as_sf(coords = c("longitude", "latitude"),
+           crs = 4326) 
+
+#### Make hexagons
+h3_sf <- roads_sf %>%
+  st_buffer(dist = 1000) %>%
+  st_bbox() %>%
+  st_as_sfc() %>% # Make into polygon
+  polygon_to_cells(res = 5) %>%
+  cell_to_polygon(simple = FALSE)
+
+#### Determine ADM3 that each hexagon falls in
+h3_sf$GID_3 <- h3_sf %>%
+  st_centroid() %>%
+  st_join(pak_3_sf) %>%
+  pull(GID_3)
+
+#### Compute distance to roads and cities
+h3_sf$dist_roads  <- st_distance(h3_sf, roads_sf) %>% apply(1, min)
+h3_sf$dist_cities <- st_distance(h3_sf, cities_sf) %>% apply(1, min)
+h3_sf$dist_m2     <- st_distance(h3_sf, roads_sf[roads_sf$ref == "M-2",]) %>% as.numeric()
+h3_sf$dist_n5     <- st_distance(h3_sf, roads_sf[roads_sf$ref == "N-5",]) %>% as.numeric()
+
+#### Get NTL
+ntl_r <- bm_raster(
+  roi_sf = h3_sf,
+  product_id = "VNP46A4",
+  date = 2012:2024,
+  bearer = "dont-change",
+  aggregation_fun = "sum",
+  output_location_type = "file",
+  file_dir = file.path(here("data", "ntl_blackmarble", "pakistan"))
+)
+
+
+
+
+```
+
+
+<details>
+<summary>Click to see solution</summary>
+```{r}
+#### Load data
+pak_3_sf <- read_sf(here("data", "gadm", "pak_adm3.geojson"))
+roads_sf <- read_sf(here("data", "osm", "roads_pak_treat_n5_m2.geojson"))
+cities_df <- read_csv(here("data", "cities", "pak_cities.csv"), show_col_types = F)
+
+cities_sf <- cities_df %>%
+  st_as_sf(coords = c("longitude", "latitude"),
+           crs = 4326) 
+
+#### Make hexagons
+h3_sf <- roads_sf %>%
+  st_buffer(dist = 1000) %>%
+  st_bbox() %>%
+  st_as_sfc() %>% # Make into polygon
+  polygon_to_cells(res = 5) %>%
+  cell_to_polygon(simple = FALSE)
+
+#### Determine ADM3 that each hexagon falls in
+h3_sf$GID_3 <- h3_sf %>%
+  st_centroid() %>%
+  st_join(pak_3_sf) %>%
+  pull(GID_3)
+
+#### Compute distance to roads and cities
+h3_sf$dist_roads  <- st_distance(h3_sf, roads_sf) %>% apply(1, min)
+h3_sf$dist_cities <- st_distance(h3_sf, cities_sf) %>% apply(1, min)
+h3_sf$dist_m2     <- st_distance(h3_sf, roads_sf[roads_sf$ref == "M-2",]) %>% as.numeric()
+h3_sf$dist_n5     <- st_distance(h3_sf, roads_sf[roads_sf$ref == "N-5",]) %>% as.numeric()
+
+#### Get NTL
+ntl_r <- bm_raster(
+  roi_sf = h3_sf,
+  product_id = "VNP46A4",
+  date = 2012:2024,
+  bearer = bearer,
+  aggregation_fun = "sum",
+  output_location_type = "file",
+  file_dir = file.path(here("data", "ntl_blackmarble", "pakistan"))
+)
+
+#### Transform NTL
+ntl_bin1_r  <- ntl_r > 1
+ntl_bin10_r <- ntl_r > 10
+
+#### Extract NTL
+ntl_df       <- exact_extract(ntl_r, h3_sf, "sum", progress = F)
+ntl_bin1_df  <- exact_extract(ntl_bin1_r, h3_sf, "mean", progress = F)
+ntl_bin10_df <- exact_extract(ntl_bin10_r, h3_sf, "mean", progress = F)
+
+ntl_df$h3_address       <- h3_sf$h3_address
+ntl_bin1_df$h3_address  <- h3_sf$h3_address
+ntl_bin10_df$h3_address <- h3_sf$h3_address
+
+ntl_df <- ntl_df %>%
+  pivot_longer(cols = -h3_address) %>%
+  mutate(name = name %>%
+           str_replace_all("sum.t", "") %>%
+           as.numeric()) %>%
+  rename(year = name,
+         ntl_sum = value)
+
+ntl_bin1_df <- ntl_bin1_df %>%
+  pivot_longer(cols = -h3_address) %>%
+  mutate(name = name %>%
+           str_replace_all("mean.t", "") %>%
+           as.numeric()) %>%
+  rename(year = name,
+         ntl_prop_1 = value)
+
+ntl_bin10_df <- ntl_bin10_df %>%
+  pivot_longer(cols = -h3_address) %>%
+  mutate(name = name %>%
+           str_replace_all("mean.t", "") %>%
+           as.numeric()) %>%
+  rename(year = name,
+         ntl_prop_10 = value)
+
+#### Merge
+h3_df <- h3_sf %>% st_drop_geometry()
+ntl_clean_df <- ntl_df %>%
+  left_join(ntl_bin1_df, by = c("h3_address", "year")) %>%
+  left_join(ntl_bin10_df, by = c("h3_address", "year")) %>%
+  left_join(h3_df, by = c("h3_address"))
+
+#### Filter
+ntl_clean_df <- ntl_clean_df %>%
+  filter(dist_cities >= 5000,
+         dist_roads >= 1000,
+         dist_roads <= 10000) %>%
+  mutate(near_m2 = as.numeric(dist_m2 <= 10000),
+         year_fct = year %>%
+           factor() %>%
+           relevel("2015"))
+
+#### Regressions
+lm_ntl_sum     <- feols(ntl_sum ~ year_fct * near_m2 | h3_address + year, 
+                        cluster = ~GID_3, data = ntl_clean_df)
+lm_ntl_prop_1  <- feols(ntl_prop_1 ~ year_fct * near_m2 | h3_address + year, 
+                        cluster = ~GID_3, data = ntl_clean_df)
+lm_ntl_prop_10 <- feols(ntl_prop_10 ~ year_fct * near_m2 | h3_address + year, 
+                        cluster = ~GID_3, data = ntl_clean_df)
+
+#### Regression Figures
+lm_df <- bind_rows(
+  lm_ntl_sum %>%
+    confint() %>%
+    clean_names() %>%
+    rownames_to_column(var = "year") %>%
+    mutate(dep_var = "NTL, Sum"),
+  
+  lm_ntl_prop_1 %>%
+    confint() %>%
+    clean_names() %>%
+    rownames_to_column(var = "year") %>%
+    mutate(dep_var = "Proportion NTL > 1"),
+  
+  lm_ntl_prop_10 %>%
+    confint() %>%
+    clean_names() %>%
+    rownames_to_column(var = "year") %>%
+    mutate(dep_var = "Proportion NTL > 10")
+) %>%
+  mutate(year = year %>% str_replace_all("year_fct|:near_m2", "") %>%
+           as.numeric(),
+         b = (x2_5_percent + x97_5_percent) / 2) 
+
+lm_df %>%
+  ggplot(aes(x = year,
+             ymin = x2_5_percent,
+             ymax = x97_5_percent,
+             y = b)) +
+  geom_hline(yintercept = 0) +
+  geom_errorbar() +
+  geom_point() +
+  theme_classic() +
+  labs(x = NULL,
+       y = "Coef (+/- 95% CI)",
+       title = "Impact of M-2 Upgrades on NTL") +
+  facet_wrap(~dep_var, scales = "free_y")
+
+```
+</details>
+
+### Additional Resources
+
+__Spatial R Courses:__
+
+__R Cheatsheets:__
+
+* [sf](https://rstudio.github.io/cheatsheets/sf.pdf)
+
+__Package Webpages:__
+
+* [BlackMarbleR](https://worldbank.github.io/blackmarbler/)
+* [exactextractr](https://github.com/isciences/exactextractr)
 

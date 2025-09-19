@@ -82,7 +82,7 @@ bm_extract(
   date = 2012:2024,
   bearer = bearer,
   output_location_type = "file",
-  file_dir = file.path(here("data", "ntl_blackmarble", "nigeria")),
+  file_dir = file.path(here("data", "ntl_blackmarble", "nigeria", "adm1")),
   aggregation_fun = "sum"
 )
 
@@ -301,4 +301,155 @@ bm_raster(
 )
 
 # Pakistan ---------------------------------------------------------------------
+pak_sf <- gadm("PAK", level=0, path = tempdir(), version="latest") %>%
+  st_as_sf() %>%
+  dplyr::select(COUNTRY)
 
+pak_3_sf <- gadm("PAK", level=3, path = tempdir(), version="latest") %>%
+  st_as_sf() %>%
+  dplyr::select(NAME_1, NAME_2, NAME_3, GID_3)
+
+write_sf(pak_sf, here("data", "gadm", "pak_adm0.geojson"), delete_dsn = T)
+write_sf(pak_3_sf, here("data", "gadm", "pak_adm3.geojson"), delete_dsn = T)
+
+# Create dataframe with coordinates
+cities_df <- data.frame(
+  city = c("Islamabad", "Lahore"),
+  latitude = c(33.6844, 31.5204),
+  longitude = c(73.0479, 74.3587)
+) 
+
+write_csv(cities_df, here("data", "cities", "pak_cities.csv"))
+
+
+cities_buff_sf <- cities_df %>%
+  st_as_sf(coords = c("longitude", "latitude"),
+           crs =4326) %>%
+  st_buffer(dist = 40000)
+
+#### Roads
+pak_roads_list <- opq(bbox = st_bbox(cities_buff_sf)) %>%
+  add_osm_feature(key = "highway",
+                  value = c("motorway", "trunk")) %>%
+  osmdata_sf()
+
+pak_roads_sf <- pak_roads_list$osm_lines
+
+pak_roads_sf <- pak_roads_sf %>%
+  dplyr::filter(ref %in% c("N-5",
+                           "M-2"),
+                !(osm_id %in% c("273911484",
+                                "273911482",
+                                "246583093",
+                                "23016976",
+                                "344034979",
+                                "291014703",
+                                "177946601",
+                                "852469505",
+                                "785020694",
+                                "235315178",
+                                "177946600",
+                                "291852251",
+                                "23229008",
+                                "177946598",
+                                "23228675",
+                                "23016957",
+                                "976222651",
+                                "1255775263",
+                                "666194551",
+                                "23017267",
+                                "23228702",
+                                "23017024",
+                                "23228611",
+                                "178151252",
+                                "1082100662",
+                                "23017541",
+                                "664737136",
+                                "237283234",
+                                "976222649",
+                                "913781383",
+                                "319062321",
+                                "317001987",
+                                "177946590",
+                                "235315177",
+                                "235315176",
+                                "803430752",
+                                "23017447",
+                                "23016981",
+                                "9897259",
+                                "235293141",
+                                "976222652",
+                                "177946592",
+                                "681459745",
+                                "664737137",
+                                "23016979",
+                                "23017174",
+                                "178151232",
+                                "1194002504",
+                                "1082100661",
+                                "1426168025",
+                                "344034976",
+                                "177946589",
+                                "681459744",
+                                "23017222",
+                                "23017029",
+                                "976222650",
+                                "1194002505",
+                                "23017223",
+                                "23017025",
+                                "666194550",
+                                "8118951")))
+
+
+leaflet() %>%
+  addTiles() %>%
+  addPolylines(data = pak_roads_sf, color = "red")  
+
+pak_roads_sf <- pak_roads_sf %>%
+  dplyr::select(osm_id, name, ref) %>%
+  group_by(ref) %>%
+  dplyr::summarise(geometry = geometry %>% st_union() %>% st_make_valid()) %>%
+  ungroup()
+
+write_sf(pak_roads_sf, here("data", "osm", "roads_pak_treat_n5_m2.geojson"), delete_dsn = T)
+
+
+pak_roads_buff_sf <- pak_roads_sf %>% st_buffer(dist = 20000)
+leaflet() %>%
+  addTiles() %>%
+  addPolylines(data = pak_roads_buff_sf,
+               popup = ~ref) 
+
+
+r <- bm_raster(
+  roi_sf = pak_roads_buff_sf %>% st_union() %>% st_as_sf(),
+  product_id = "VNP46A4",
+  date = 2012:2024,
+  bearer = bearer,
+  output_location_type = "file",
+  file_dir = file.path(here("data", "ntl_blackmarble", "pakistan"))
+)
+
+plot(r)
+
+leaflet() %>%
+  addTiles() %>%
+  addPolygons(data = pak_roads_buff_sf)
+
+# h3 -----------
+library(h3jsr)
+
+# 3. Get H3 indexes covering the bounding box
+h3_sf <- polygon_to_cells(bbox_sf, res = 5) %>%
+  cell_to_polygon(simple = FALSE)
+
+# 4. Convert H3 indexes to sf polygons
+h3_sf <- cell_to_polygon(h3_indexes, simple = FALSE) %>%
+  st_as_sf() %>%
+  rename(h3_index = hex_id)
+
+# 5. Optional: clip to the actual polygon
+h3_sf <- st_intersection(h3_sf, pak_roads_buff_sf)
+
+# 6. View the first rows
+head(h3_sf)
