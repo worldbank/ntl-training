@@ -1,0 +1,94 @@
+name: Render and Publish
+
+on:
+  push:
+    branches: main
+  pull_request:
+    branches: main
+  # to be able to trigger a manual build
+  workflow_dispatch:
+
+jobs:
+  render-and-deploy:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Quarto
+        uses: quarto-dev/quarto-actions/setup@v2
+        with:
+          # To install LaTeX to build PDF book 
+          tinytex: true 
+          # uncomment below and fill to pin a version
+          # version: SPECIFIC-QUARTO-VERSION-HERE
+      
+      # add software dependencies here and any libraries
+      
+      # From https://github.com/r-lib/actions/tree/v2/setup-r
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+          
+      - name: Install R packages
+        uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          packages: |
+            any::knitr
+            any::rmarkdown
+            any::downlit
+            any::xml2
+            any::sf
+            any::terra
+            any::leaflet
+            any::leaflet.providers
+            any::ggplot2
+            any::dplyr
+            any::tidyverse
+            any::lubridate
+            any::here
+            any::usethis
+            any::blackmarbler
+            any::osmdata
+            any::geodata
+            any::exactextractr
+            any::readr
+            any::readxl
+            any::janitor
+            any::scales
+            any::viridis
+            any::RColorBrewer
+            any::DT
+            any::plotly
+            any::htmlwidgets
+            any::ggpubr
+            any::tidyterra
+            any::gtools
+            any::WDI
+            any::kableExtra
+            any::countrycode
+            any::haven
+            any::ggnewscale
+          cache-version: 2
+
+      - name: Render Quarto Project
+        uses: quarto-dev/quarto-actions/render@v2
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+        
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # Upload docs directory
+          path: docs/
+          
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

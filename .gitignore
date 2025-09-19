@@ -1,6 +1,12 @@
 # Data
 *.gpkg
 
+# Quarto
+docs/
+/.quarto/
+_site/
+.quarto
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
