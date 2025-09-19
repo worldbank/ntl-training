@@ -72,6 +72,9 @@ jobs:
             any::gtools
             any::WDI
             any::kableExtra
+            any::countrycode
+            any::haven
+            any::ggnewscale
           cache-version: 2
 
       - name: Render Quarto Project
