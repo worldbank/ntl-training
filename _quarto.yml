@@ -1,6 +1,8 @@
 project:
   type: website
   output-dir: docs
+  render:
+    - README.md
 
 website:
   title: "Nighttime Lights for Economic Analysis"
@@ -9,24 +11,24 @@ website:
   repo-url: "https://github.com/worldbank/ntl-training"
   
   navbar:
-    title: "NTL Training"
+    title: "Monitoring Economies with Nightlights"
     left:
-      - href: index.qmd
+      - href: README.md
         text: Home
-      - href: trainings/
-        text: Training Materials
-      - href: ntl-diagnostic-code/
-        text: Country Diagnostics
+      # - href: trainings/
+      #   text: Training Materials
+      # - href: ntl-diagnostic-code/
+      #   text: Country Diagnostics
     
-  sidebar:
-    - title: "Training Materials"
-      contents:
-        - trainings/01_spatial_analysis_review.qmd
-        - trainings/03_intro_blackmarbler.qmd
-        - trainings/03_spatial_analysis_blackmarbler.qmd
-    - title: "Diagnostics"
-      contents:
-        - ntl-diagnostic-code/ntl-diagnostics.qmd
+  # sidebar:
+  #   - title: "Using BlackMarbleR"
+  #     contents:
+  #       - trainings/01_spatial_analysis_review.qmd
+  #       - trainings/03_intro_blackmarbler.qmd
+  #       - trainings/03_spatial_analysis_blackmarbler.qmd
+  #   - title: "Diagnostics"
+  #     contents:
+  #       - ntl-diagnostic-code/ntl-diagnostics.qmd
 
 format:
   html:
@@ -43,6 +45,3 @@ format:
 execute:
   freeze: auto
   cache: true
-  
-filters:
-  - include-code-files
