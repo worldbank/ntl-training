@@ -1,12 +1,20 @@
-# Nighttime Lights for Economic Analysis
+# Monitoring Economies from Space Using Nighttime Lights
 
 ## Background
 
 This material was jointly developed by the [DECDI ieConnect](https://www.worldbank.org/en/about/unit/unit-dec/impactevaluation/partnerships/ieconnect) team and the [World Bank Data Lab](https://wbdatalab.org/) as an introduction to using nighttime lights for economic analysis.
 
-## Course description
+## Course Motivation
 
-Nighttime lights have become a widely used data sources, including in the social sciencies literature. [Henderson, Storeygard, and Weil's](https://www.aeaweb.org/articles?id=10.1257/aer.102.2.994) seminal 2012 paper illustrated the use of leveraging nighttime lights to measure economic growth. Their paper helped launch the use of nighttime lights in a variety of applications; a Google scholar search of ["nighttime lights economics"](https://scholar.google.com/scholar?hl=en&as_sdt=0%2C9&q=nighttime+lights+economics&btnG=) brings over 40,000 responses. In addition to leverage nighttime lights as a proxy for economic activity, nighttime lights has been used for various applications such as tracking [urbanization](https://www.sciencedirect.com/science/article/abs/pii/S0034425797000461) and examining impacts of [natural disasters](https://www.sciencedirect.com/science/article/abs/pii/S0143622819308525), [conflict](https://www.mdpi.com/2072-4292/10/6/858), and [infrastructure improvements](https://documents.worldbank.org/en/publication/documents-reports/documentdetail/099332404062230683/idu073a7158605532046490b712098aed9008539).
+Nighttime lights have become a widely used data sources, including in the social sciencies literature. [Henderson, Storeygard, and Weil's](https://www.aeaweb.org/articles?id=10.1257/aer.102.2.994) seminal 2012 paper illustrated the use of leveraging nighttime lights to measure economic growth. They compared the nighttime lights between North Korea and South Korea and showed that lights can be proxy for economic growth. 
+
+Their paper helped launch the use of nighttime lights in a variety of applications; a Google scholar search of ["nighttime lights economics"](https://scholar.google.com/scholar?hl=en&as_sdt=0%2C9&q=nighttime+lights+economics&btnG=) brings over 40,000 responses. In addition to leverage nighttime lights as a proxy for economic activity, nighttime lights has been used for various applications such as tracking [urbanization](https://www.sciencedirect.com/science/article/abs/pii/S0034425797000461) and examining impacts of [natural disasters](https://www.sciencedirect.com/science/article/abs/pii/S0143622819308525), [conflict](https://www.mdpi.com/2072-4292/10/6/858), and [infrastructure improvements](https://documents.worldbank.org/en/publication/documents-reports/documentdetail/099332404062230683/idu073a7158605532046490b712098aed9008539).
+
+Within the World Bank and other Multinational Banks, staff have used Nighttime lights data in [estimating subnational GDP in countries like Kenya and Rwanda](https://blogs.worldbank.org/en/developmenttalk/night-lights-and-pursuit-subnational-gdp-application-kenya-rwanda), in [mapping electric grid infrastructure](https://blogs.worldbank.org/en/energy/using-night-lights-map-electrical-grid-infrastructure), [measuring quarterly economic growth](https://openknowledge.worldbank.org/server/api/core/bitstreams/ba5cb33b-9000-50c6-aa8c-498fbb7428c9/content) and [poverty mapping](https://openknowledge.worldbank.org/entities/publication/f6b0c7dc-d775-5dce-b887-7e9eb064de0e).  
+
+In the recent years, the DECDI team and the data Lab have worked with multiple teams across the World Bank to provide NTL Analytics, especially in post disaster contexts. This includes [Turkiye Earthquake Monitoring](https://datapartnership.org/turkiye-earthquake-impact/notebooks/nighttime-lights/README.html), [Gaza Conflict Impact Analysis](https://worldbank.github.io/gaza-israel-conflict-impact-analysis/notebooks/nighttime-lights/README.html) and [Sudan Conflict Impact Analysis](https://worldbank.github.io/sudan-nighttime-lights/nighttime_lights.html). This course is meant to empower staff to be able to query Nightlight data internally. 
+
+## Course description
 
 This course provides an overview of using nighttime lights data, with a focus for economic applications. It covers the different sources of nighttime lights, how to query and aggregate data, and addressing data quality with nighttime lights (eg, cloud cover). The course focuses on [NASA Black Marble](https://blackmarble.gsfc.nasa.gov/) data, using the [BlackMarbleR](https://worldbank.github.io/blackmarbler/) (for R) and [BlackMarblePy](https://github.com/worldbank/blackmarblepy) (for Python) packages for querying data.
 
