@@ -11,6 +11,9 @@ library(osmdata)
 library(leaflet)
 library(blackmarbler)
 
+bearer <- read_csv("~/Dropbox/bearer_bm.csv") %>%
+  pull(token)
+
 # Gas Flaring ------------------------------------------------------------------
 gf_df <- read_xlsx(here("data", "gas_flaring", "rawdata", 
                         "2012-2024-Flare-Volume-Estimates-by-individual-Flare-Location.xlsx"))
@@ -60,8 +63,7 @@ nga_roads_sf <- nga_roads_sf %>%
 write_sf(nga_roads_sf, here("data", "osm", "roads_nga_main.geojson"), delete_dsn = T)
 
 # Nighttime Lights -------------------------------------------------------------
-bearer <- read_csv("~/Dropbox/bearer_bm.csv") %>%
-  pull(token)
+
 
 bm_raster(
   roi_sf = nga_1_sf,
@@ -142,6 +144,79 @@ write_sf(pri_0_sf, here("data", "gadm", "pri_adm0.geojson"), delete_dsn = T)
 write_sf(pri_1_sf, here("data", "gadm", "pri_adm1.geojson"), delete_dsn = T)
 
 #### NTL
+bm_extract(
+  roi_sf = pri_0_sf,
+  product_id = "VNP46A2",
+  date = seq.Date(from = ymd("2017-09-20") - 14,
+                  to = ymd("2017-09-20") + 14,
+                  by = "day"),
+  bearer = bearer,
+  output_location_type = "file",
+  variable = "Gap_Filled_DNB_BRDF-Corrected_NTL",
+  file_dir = file.path(here("data", "ntl_blackmarble", "puerto_rico", "adm0"))
+)
+
+bm_extract(
+  roi_sf = pri_0_sf,
+  product_id = "VNP46A2",
+  date = seq.Date(from = ymd("2017-09-20") - 14,
+                  to = ymd("2017-09-20") + 14,
+                  by = "day"),
+  bearer = bearer,
+  output_location_type = "file",
+  variable = "DNB_BRDF-Corrected_NTL",
+  file_dir = file.path(here("data", "ntl_blackmarble", "puerto_rico", "adm0"))
+)
+
+bm_raster(
+  roi_sf = pri_0_sf,
+  product_id = "VNP46A2",
+  date = seq.Date(from = ymd("2017-09-20") - 14,
+                  to = ymd("2017-09-20") + 14,
+                  by = "day"),
+  bearer = bearer,
+  output_location_type = "file",
+  variable = "Gap_Filled_DNB_BRDF-Corrected_NTL",
+  file_dir = file.path(here("data", "ntl_blackmarble", "puerto_rico"))
+)
+
+bm_raster(
+  roi_sf = pri_0_sf,
+  product_id = "VNP46A2",
+  date = seq.Date(from = ymd("2017-09-20") - 14,
+                  to = ymd("2017-09-20") + 14,
+                  by = "day"),
+  bearer = bearer,
+  output_location_type = "file",
+  variable = "DNB_BRDF-Corrected_NTL",
+  file_dir = file.path(here("data", "ntl_blackmarble", "puerto_rico"))
+)
+
+bm_raster(
+  roi_sf = pri_0_sf,
+  product_id = "VNP46A2",
+  date = seq.Date(from = ymd("2017-09-20") - 14,
+                  to = ymd("2017-09-20") + 14,
+                  by = "day"),
+  bearer = bearer,
+  output_location_type = "file",
+  variable = "Mandatory_Quality_Flag",
+  file_dir = file.path(here("data", "ntl_blackmarble", "puerto_rico"))
+)
+
+bm_raster(
+  roi_sf = pri_0_sf,
+  product_id = "VNP46A2",
+  date = seq.Date(from = ymd("2017-09-20") - 14,
+                  to = ymd("2017-09-20") + 14,
+                  by = "day"),
+  bearer = bearer,
+  output_location_type = "file",
+  variable = "Latest_High_Quality_Retrieval",
+  file_dir = file.path(here("data", "ntl_blackmarble", "puerto_rico"))
+)
+
+#### NTL
 bm_raster(
   roi_sf = pri_0_sf,
   product_id = "VNP46A3",
@@ -150,6 +225,69 @@ bm_raster(
                   by = "month"),
   bearer = bearer,
   output_location_type = "file",
+  file_dir = file.path(here("data", "ntl_blackmarble", "puerto_rico"))
+)
+
+#### NTL
+bm_extract(
+  roi_sf = pri_0_sf,
+  product_id = "VNP46A3",
+  date = seq.Date(from = ymd("2017-01-01"),
+                  to = ymd("2018-12-01"),
+                  by = "month"),
+  bearer = bearer,
+  output_location_type = "file",
+  aggregation_fun = "mean",
+  file_dir = file.path(here("data", "ntl_blackmarble", "puerto_rico", "adm0"))
+)
+
+bm_extract(
+  roi_sf = pri_0_sf,
+  product_id = "VNP46A3",
+  date = seq.Date(from = ymd("2017-01-01"),
+                  to = ymd("2018-12-01"),
+                  by = "month"),
+  bearer = bearer,
+  output_location_type = "file",
+  aggregation_fun = "sum",
+  file_dir = file.path(here("data", "ntl_blackmarble", "puerto_rico", "adm0"))
+)
+
+#### NTL
+bm_extract(
+  roi_sf = pri_1_sf,
+  product_id = "VNP46A3",
+  date = seq.Date(from = ymd("2017-01-01"),
+                  to = ymd("2018-12-01"),
+                  by = "month"),
+  bearer = bearer,
+  output_location_type = "file",
+  aggregation_fun = "mean",
+  file_dir = file.path(here("data", "ntl_blackmarble", "puerto_rico", "adm1"))
+)
+
+bm_extract(
+  roi_sf = pri_1_sf,
+  product_id = "VNP46A3",
+  date = seq.Date(from = ymd("2017-01-01"),
+                  to = ymd("2018-12-01"),
+                  by = "month"),
+  bearer = bearer,
+  output_location_type = "file",
+  aggregation_fun = "sum",
+  file_dir = file.path(here("data", "ntl_blackmarble", "puerto_rico", "adm1"))
+)
+
+#### NTL
+bm_raster(
+  roi_sf = pri_0_sf,
+  product_id = "VNP46A3",
+  date = seq.Date(from = ymd("2017-01-01"),
+                  to = ymd("2018-12-01"),
+                  by = "month"),
+  bearer = bearer,
+  output_location_type = "file",
+  variable = "NearNadir_Composite_Snow_Free_Quality",
   file_dir = file.path(here("data", "ntl_blackmarble", "puerto_rico"))
 )
 
@@ -162,5 +300,5 @@ bm_raster(
   file_dir = file.path(here("data", "ntl_blackmarble", "puerto_rico"))
 )
 
-
+# Pakistan ---------------------------------------------------------------------
 

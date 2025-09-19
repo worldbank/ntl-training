@@ -609,6 +609,44 @@ ntl_m_df <- exact_extract(ntl_m_r, adm1_sf, fun = "sum", progress = F)
 head(ntl_m_df)
 ```
 
+
+__Custom functions__
+
+`exact_extract()` allows using custom functions for creating stats out of satellite imagery. For the `fun` argument in `exact_extract()`, we enter a function with two arguments:
+
+* `values`: Nighttime light values
+* `coverage_fraction`: Fraction of pixel that overlaps with polygon
+
+Below, we return the number of pixels in polygons that are above 1 (weighting by the coverage fraction). `sum(values_g1 * coverage_fraction, na.rm = TRUE)` returns a vector, so `exact_extract` will return a vector.
+```{r}
+adm1_sf$n_ntl_g1 <- exact_extract(ntl_r, 
+                                  adm1_sf, 
+                                  fun = function(values, coverage_fraction) {
+                                    values_g1 <- values >= 1
+                                    sum(values_g1 * coverage_fraction, na.rm = TRUE)
+                                  }, 
+                                  progress = F)
+```
+
+We can also change the function to return a dataframe
+```{r}
+ntl_df <- exact_extract(ntl_r, 
+                        adm1_sf, 
+                        fun = function(values, coverage_fraction) {
+                          
+                          n_g1 <- sum( (values >= 1) * coverage_fraction, na.rm = TRUE)
+                          n_g5 <- sum( (values >= 5) * coverage_fraction, na.rm = TRUE)
+                          n_g10 <- sum( (values >= 10) * coverage_fraction, na.rm = TRUE)
+                          
+                          data.frame(n_g1 = n_g1,
+                                     n_g5 = n_g5,
+                                     n_g10 = n_g10)
+                        }, 
+                        progress = F)
+
+head(ntl_df)
+```
+
 __Exercise: Make a map of the sum of NTL at the ADM 2 level__
 ```{r ntl_map_1, exercise = T}
 adm2_sf <- read_sf(here("data", "gadm", "nga_adm2.geojson"), quiet = T)
@@ -619,9 +657,9 @@ ntl_r <- rast(file.path(here("data", "ntl_blackmarble", "nigeria",
 ```
 
 <details>
- <summary style="color: blue; text-decoration: underline; cursor: pointer;">
-    Click to see solution
-  </summary>
+<summary style="color: blue; text-decoration: underline; cursor: pointer;">
+Click to see solution
+</summary>
 ```{r}
 adm2_sf <- read_sf(here("data", "gadm", "nga_adm2.geojson"), quiet = T)
 ntl_r <- rast(file.path(here("data", "ntl_blackmarble", "nigeria",
@@ -715,7 +753,7 @@ plot(adm0_sf)
 
 __bm_extract()__
 
-```{r usage1, exercise = T}
+```{r usage2, exercise = T}
 
 # Load ADM
 adm1_sf <- read_sf(here("data", "gadm", "nga_adm1.geojson"), quiet = T)
@@ -734,32 +772,743 @@ ntl_df <- bm_extract(
 head(ntl_df)
 ```
 
-## BlackMarbleR: Exercise 1 [Quality Check]
+## BlackMarbleR: Exercise 1 [Gas Flaring in Nigeria]
 
-__Exercise:__ Create a raster of NTL for January 2024, removing gap filled pixels. Calculate the proportion of non-NA pixels in each ADM2.
-```{r qualitycheck, exercise = T}
+### Part 1: Nighttime lights at ADM2 level
 
-# Load ADM
-adm2_sf <- read_sf(here("data", "gadm", "nga_adm2.geojson"), quiet = T)
+Determine the sum of nighttime lights annually from 2012 to 2024 across Nigeria (ie, at ADM0 level). Make a figure that shows trends in NTL:
 
-# Raster, where gap filled removed
+* Using all NTL pixels
+* Only considering gas flaring locations
+* Excluding gas flaring locations
+
+Decisions to make
+
+* What buffer should you use for excluding gas flaring locations?
+* How to include/exclude gas flaring locations? 
+- Approach 1: Mask NTL raster (ie, use `mask()` and `mask(inverse = T)`)
+- Approach 2: Create geometries including/excluding gas flaring (ie, use `st_intersection()` and `st_difference()`)
+
+```{r nga_gf_1, exercise = T, exercise.lines=30}
+#### Load data
+nga0_sf <- read_sf(here("data", "gadm", "nga_adm0.geojson"))
+gf_df   <- read_csv(here("data", "gas_flaring", "finaldata", "gas_flaring_nga.csv"))
+
+#### Buffer gas flaring
+gf_sf <- gf_df %>%
+  st_as_sf(coords = c("longitude", "latitude"),
+           crs = 4326)
+
+gf_5km_sf <- st_buffer(gf_sf, dist = 5000)
+
+#### Get NTL rasters
 ntl_r <- bm_raster(
-  roi_sf = nga_1_sf,
-  product_id = "VNP46A3",
-  date = "2024-01-01",
-  bearer = bearer,
+  roi_sf = nga0_sf,
+  product_id = "VNP46A4",
+  date = 2012:2024,
+  bearer = "dont-change",
   output_location_type = "file",
-  file_dir = file.path(here("data", "ntl_blackmarble", "nigeria")),
-  variable = "NearNadir_Composite_Snow_Free",
-  quality_flag_rm = 2
+  file_dir = file.path(here("data", "ntl_blackmarble", "nigeria"))
 )
 
-# All non-NA pixels = 1
-ntl_r[!is.na(ntl_r)] <- 1
-ntl_r[is.na(ntl_r)] <- 0
+#### Make rasters or geometries that include/exclude gas flaring
+
+#### Extract NTL Data
+
+#### Plot
+
 ```
 
-## BlackMarbleR: Exercise 2 [NTL in/excluding gas flaring]
+<details>
+<summary style="color: blue; text-decoration: underline; cursor: pointer;">
+Click to see solution (approach 1: masking raster)
+</summary>
 
-## BlackMarbleR: Exercise 3 [Hurricane Maria]
+```{r}
+#### Load data
+nga0_sf <- read_sf(here("data", "gadm", "nga_adm0.geojson"))
+gf_df   <- read_csv(here("data", "gas_flaring", "finaldata", "gas_flaring_nga.csv"),
+                    show_col_types = F)
+
+#### Buffer gas flaring
+gf_sf <- gf_df %>%
+  st_as_sf(coords = c("longitude", "latitude"),
+           crs = 4326)
+
+gf_5km_sf <- st_buffer(gf_sf, dist = 5000)
+
+#### Get NTL rasters
+ntl_r <- bm_raster(
+  roi_sf = nga0_sf,
+  product_id = "VNP46A4",
+  date = 2012:2024,
+  bearer = "dont-change",
+  output_location_type = "file",
+  file_dir = file.path(here("data", "ntl_blackmarble", "nigeria"))
+)
+
+#### Mask NTL
+ntl_gf_r   <- mask(ntl_r, gf_5km_sf)
+ntl_nogf_r <- mask(ntl_r, gf_5km_sf, inverse = T)
+
+#### Fix names
+# Names of layers changed to "layer" for all years; exact_extract() throws
+# error if all names are the same
+names(ntl_nogf_r) <- paste0("t", 2012:2024)
+
+#### Extract Data
+ntl_df <- data.frame(year = 2012:2024)
+ntl_df$ntl_sum      <- exact_extract(ntl_r,      nga0_sf, "sum", progress = F) %>% as.numeric()
+ntl_df$ntl_gf_sum   <- exact_extract(ntl_gf_r,   nga0_sf, "sum", progress = F) %>% as.numeric()
+ntl_df$ntl_nogf_sum <- exact_extract(ntl_nogf_r, nga0_sf, "sum", progress = F) %>% as.numeric()
+
+#### Plot
+ntl_df %>%
+  pivot_longer(cols = -year) %>%
+  mutate(name = case_when(
+    name == "ntl_gf_sum" ~ "NTL: Gas Flaring",
+    name == "ntl_nogf_sum" ~ "NTL: Exclude Gas Flaring",
+    name == "ntl_sum" ~ "NTL: Total"
+  )) %>%
+  ggplot(aes(x = year,
+             y = value,
+             color = name)) +
+  geom_line(linewidth = 1) +
+  labs(x = NULL,
+       y = "Radiance",
+       color = NULL) +
+  theme_classic()
+```
+
+</details>
+
+<details>
+<summary style="color: blue; text-decoration: underline; cursor: pointer;">
+Click to see solution (approach 2: make geometries including/excluding gas flaring)
+</summary>
+
+```{r}
+#### Load data
+nga0_sf <- read_sf(here("data", "gadm", "nga_adm0.geojson"))
+gf_df   <- read_csv(here("data", "gas_flaring", "finaldata", "gas_flaring_nga.csv"),
+                    show_col_types = F)
+
+#### Buffer gas flaring
+gf_sf <- gf_df %>%
+  st_as_sf(coords = c("longitude", "latitude"),
+           crs = 4326)
+
+gf_5km_sf <- st_buffer(gf_sf, dist = 5000)
+
+#### Get NTL rasters
+ntl_r <- bm_raster(
+  roi_sf = nga0_sf,
+  product_id = "VNP46A4",
+  date = 2012:2024,
+  bearer = "dont-change",
+  output_location_type = "file",
+  file_dir = file.path(here("data", "ntl_blackmarble", "nigeria"))
+)
+
+#### Create geometries with and excluding gas flaring
+gf_5km_u_sf <- gf_5km_sf %>% 
+  st_union() %>% 
+  st_make_valid()
+
+nga0_gf_sf   <- st_intersection(nga0_sf, gf_5km_u_sf)
+nga0_nogf_sf <- st_difference(nga0_sf, gf_5km_u_sf)
+
+# Returns dataframe with 2 observations; when plotting, 2nd looks correct
+nga0_nogf_sf <- nga0_nogf_sf[2,]
+
+#### Extract Data
+ntl_df <- data.frame(year = 2012:2024)
+ntl_df$ntl_sum      <- exact_extract(ntl_r, nga0_sf, "sum", progress = F) %>% as.numeric()
+ntl_df$ntl_gf_sum   <- exact_extract(ntl_r, nga0_gf_sf, "sum", progress = F) %>% as.numeric()
+ntl_df$ntl_nogf_sum <- exact_extract(ntl_r, nga0_nogf_sf, "sum", progress = F) %>% as.numeric()
+
+#### Plot
+ntl_df %>%
+  pivot_longer(cols = -year) %>%
+  mutate(name = case_when(
+    name == "ntl_gf_sum" ~ "NTL: Gas Flaring",
+    name == "ntl_nogf_sum" ~ "NTL: Exclude Gas Flaring",
+    name == "ntl_sum" ~ "NTL: Total"
+  )) %>%
+  ggplot(aes(x = year,
+             y = value,
+             color = name)) +
+  geom_line(linewidth = 1) +
+  labs(x = NULL,
+       y = "Radiance",
+       color = NULL) +
+  theme_classic()
+```
+
+</details>
+
+### Part 2: Nighttime lights in gas flaring locations
+
+Calculate the sum of NTL around each gas flaring location in 2024. Using this data:
+
+1. Make a figure showing the distribution of NTL across gas flaring locations
+2. Map gas flaring locations, coloring each location by the sum of NTL
+
+```{r nga_gf_2, exercise = T, exercise.lines=30}
+#### Load data
+nga0_sf <- read_sf(here("data", "gadm", "nga_adm0.geojson"))
+gf_df   <- read_csv(here("data", "gas_flaring", "finaldata", "gas_flaring_nga.csv"))
+
+#### Buffer gas flaring
+gf_sf <- gf_df %>%
+  st_as_sf(coords = c("longitude", "latitude"),
+           crs = 4326)
+
+gf_5km_sf <- st_buffer(gf_sf, dist = 5000)
+
+#### Get NTL rasters
+ntl_r <- bm_raster(
+  ###,
+  bearer = "dont-change",
+  output_location_type = "file",
+  file_dir = file.path(here("data", "ntl_blackmarble", "nigeria"))
+)
+
+#### Extract NTL
+
+#### Histogram
+
+#### Map
+
+```
+
+<details>
+<summary style="color: blue; text-decoration: underline; cursor: pointer;">
+Click to see solution
+</summary>
+
+```{r}
+#### Load data
+nga0_sf <- read_sf(here("data", "gadm", "nga_adm0.geojson"))
+gf_df   <- read_csv(here("data", "gas_flaring", "finaldata", "gas_flaring_nga.csv"))
+
+#### Buffer gas flaring
+gf_sf <- gf_df %>%
+  st_as_sf(coords = c("longitude", "latitude"),
+           crs = 4326)
+
+gf_5km_sf <- st_buffer(gf_sf, dist = 5000)
+
+#### Get NTL rasters
+ntl_r <- bm_raster(
+  roi_sf = nga0_sf,
+  product_id = "VNP46A4",
+  date = 2024,
+  bearer = "dont-change",
+  output_location_type = "file",
+  file_dir = file.path(here("data", "ntl_blackmarble", "nigeria"))
+)
+
+#### Extract NTL
+gf_5km_sf$ntl_sum <- exact_extract(ntl_r, gf_5km_sf, "sum", progress = F)
+
+#### Histogram
+gf_5km_sf %>%
+  ggplot(aes(x = ntl_sum)) +
+  geom_histogram(color = "black",
+                 fill = "darkorange") +
+  labs(x = "Radiance",
+       y = "N Gas Flaring Locations",
+       title = "Distribution of NTL across gas flaring locations") +
+  theme_classic()
+
+#### Map
+# TODO: Add basemap
+ggplot() +
+  geom_sf(data = gf_5km_sf,
+          aes(fill = ntl_sum)) +
+  theme_void()
+```
+
+</details>
+
+## BlackMarbleR: Exercise 2 [Hurricane Maria]
+
+On September 20, 2017, [Hurricane Maria](https://en.wikipedia.org/wiki/Hurricane_Maria)---then a category 4 hurricane---struck Puerto Rico, killing an estimate 3,000 people and leaving significant damage. In this exercise, we'll use nighttime lights to understand earthquake damages & recovery. This exercise has four parts.
+
+### Part 1: Monthly Trends
+
+Make a figure that shows total monthly nighttime lights in Puerto Rico from January 2017 to December 2018.
+
+```{r pr_monthly, exercise = T, exercise.lines=30}
+
+pr_sf <- read_sf(here("data", "gadm", "pri_adm0.geojson"))
+
+ntl_df <- bm_extract(
+  roi_sf = #,
+    product_id = #,
+    date = #,
+    aggregation_fun = #
+    bearer = "dont-change",
+  output_location_type = "file",
+  file_dir = file.path(here("data", "ntl_blackmarble", "puerto_rico", "adm0"))
+)
+
+```
+
+<details>
+<summary style="color: blue; text-decoration: underline; cursor: pointer;">
+Click to see solution
+</summary>
+```{r}
+
+pr_sf <- read_sf(here("data", "gadm", "pri_adm0.geojson"))
+
+ntl_df <- bm_extract(
+  roi_sf = pr_sf,
+  product_id = "VNP46A3",
+  date = seq.Date(from = ymd("2017-01-01"),
+                  to = ymd("2018-12-01"),
+                  by = "month"),
+  aggregation_fun = "sum",
+  bearer = "dont-change",
+  output_location_type = "file",
+  file_dir = file.path(here("data", "ntl_blackmarble", "puerto_rico", "adm0"))
+)
+
+ntl_df %>%
+  ggplot() +
+  geom_vline(xintercept = ymd("2017-09-01")) +
+  geom_col(aes(x = date,
+               y = ntl_sum),
+           fill = "darkorange") +
+  labs(x = NULL,
+       y = "NTL Radiance",
+       title = "Puerto Rico nighttime lights before and after hurricane Maria") +
+  theme_classic() +
+  theme(plot.title = element_text(face = "bold"))
+
+```
+</details>
+
+
+### Part 2: Damage Assessment - ADM 1 level
+
+Create a map that shows the percent change in nighttime lights at the ADM1 level, comparing September 2017 and October 2017.
+
+```{r damage_adm, exercise = T, exercise.lines=30}
+
+## Load Puerto Rico ADM1 polygon
+pr_sf <- read_sf(here("data", "puero_rico_adm1.geojson"))
+
+## Extract data
+ntl_df <- bm_extract(
+  #####,
+  bearer = "dont-change",
+  output_location_type = "file",
+  file_dir = file.path(here("data", "ntl_blackmarble", "puerto_rico", "adm1"))
+)
+
+
+```
+
+<details>
+<summary>Click to see solution</summary>
+
+```{r}
+pr_sf <- read_sf(here("data", "gadm", "pri_adm1.geojson"))
+
+ntl_df <- bm_extract(
+  roi_sf = pr_sf,
+  product_id = "VNP46A3",
+  date = seq.Date(from = ymd("2017-08-01"),
+                  to = ymd("2017-09-01"),
+                  by = "month"),
+  aggregation_fun = "sum",
+  bearer = "dont-change",
+  output_location_type = "file",
+  file_dir = file.path(here("data", "ntl_blackmarble", "puerto_rico", "adm1"))
+)
+
+ntl_pc_df <- ntl_df %>%
+  pivot_wider(id_cols = NAME_1,
+              values_from = ntl_sum,
+              names_from = date) %>%
+  clean_names() %>%
+  mutate(pc = (`2017-10-01` - `2017-09-01`) / `2017-09-01` * 100)
+
+pr_ntl_sf <- pr_sf %>%
+  left_join(ntl_pc_df, by = "NAME_1")
+
+pr_ntl_sf %>%
+  ggplot() +
+  geom_sf(aes(fill = pc)) +
+  theme_void() +
+  scale_fill_gradient(low = "red", high = "white") +
+  labs(fill = "% Change",
+       title = "% Change in NTL from Sept to Oct 2017")
+```
+
+</details>
+
+### Part 3: Damage Assessment - Pixel Level
+
+Create a map at the pixel level that shows which pixels experienced an (1) increase (green), (2) decrease (red), or (3) no change (blue) in nighttime lights from September 2017 to October 2017.
+
+__Notes:__
+
+1. Let's only consider changes above a value of 1, so a pixel experienced an increase in lights if the change was above 1.
+2. Only show pixels that had some baseline level of nighttime lights. Specifically, if a pixel had a value near 0 in September and near 0 in October, the change value should be `NA`---we don't classify this as "no change."
+
+```{r damage_pixel, exercise = T, exercise.lines=30}
+
+```
+
+<details>
+<summary>Click to see solution</summary>
+
+```{r}
+pr_sf <- read_sf(here("data", "gadm", "pri_adm0.geojson"))
+
+ntl_r <- bm_raster(
+  roi_sf = pr_sf,
+  product_id = "VNP46A3",
+  date = seq.Date(from = ymd("2017-08-01"),
+                  to = ymd("2017-09-01"),
+                  by = "month"),
+  bearer = "dont-change",
+  output_location_type = "file",
+  file_dir = file.path(here("data", "ntl_blackmarble", "puerto_rico"))
+)
+
+ntl_08_r <- ntl_r[[1]]
+ntl_09_r <- ntl_r[[2]]
+
+ntl_pc_r <- (ntl_09_r - ntl_08_r) / ntl_08_r * 100
+ntl_pc_r[ntl_pc_r >= 100]  <- 100
+ntl_pc_r[ntl_pc_r <= -100] <- -100
+ntl_pc_r[ntl_08_r <= 1] <- NA
+
+pal <- colorNumeric(
+  palette = "RdBu",
+  domain  = values(ntl_pc_r),
+  na.color = "transparent",
+  reverse = TRUE   # because RdBu is red=low, blue=high by default
+)
+
+leaflet() %>%
+  addTiles() %>%
+  addRasterImage(
+    ntl_pc_r,
+    colors = pal,
+    opacity = 0.5
+  ) %>%
+  addLegend(
+    pal = pal,
+    values = values(ntl_pc_r),
+    title = "Radiance change (%)"
+  )
+```
+
+</details>
+
+### Part 4: Assess Daily Data
+
+Two daily NTL variable options include:
+1. `DNB_BRDF-Corrected_NTL`
+2. `Gap_Filled_DNB_BRDF-Corrected_NTL`
+
+To assess quality, we can use the following variables
+1. `Mandatory_Quality_Flag`
+2. `Latest_High_Quality_Retrieval` (how far back in time a high quality retrieval was made)
+
+#### Part 4A: Rasters of quality variables
+
+Run the following code, which plots:
+1. `DNB_BRDF-Corrected_NTL` on day Hurricane hit (Sept 20)
+2. `DNB_BRDF-Corrected_NTL` five days after Hurricane hit (Sept 25)
+3. `Gap_Filled_DNB_BRDF-Corrected_NTL` five days after Hurricane hit (Sept 25)
+4. `Mandatory_Quality_Flag` five days after Hurricane hit (Sept 25)
+5. `Latest_High_Quality_Retrieval` five days after Hurricane hit (Sept 25)
+
+What do the maps indicate about our ability to use NTL to understand the immediate impacts of Hurricane damage?
+
+```{r pr_quality_check, exercise = T, exercise.lines=30}
+pri_0_sf <- read_sf(here("data", "gadm", "pri_adm0.geojson"))
+
+ntl_0920_r <- bm_raster(
+  roi_sf = pri_0_sf,
+  product_id = "VNP46A2",
+  date = "2017-09-20",
+  bearer = "dont-change",
+  output_location_type = "file",
+  variable = "DNB_BRDF-Corrected_NTL",
+  file_dir = file.path(here("data", "ntl_blackmarble", "puerto_rico"))
+)
+
+plot(ntl_0920_r)
+
+ntl_0925_r <- bm_raster(
+  roi_sf = pri_0_sf,
+  product_id = "VNP46A2",
+  date = "2017-09-25",
+  bearer = "dont-change",
+  output_location_type = "file",
+  variable = "DNB_BRDF-Corrected_NTL",
+  file_dir = file.path(here("data", "ntl_blackmarble", "puerto_rico"))
+)
+
+plot(ntl_0925_r)
+
+ntl_0925_gapfilled_r <- bm_raster(
+  roi_sf = pri_0_sf,
+  product_id = "VNP46A2",
+  date = "2017-09-25",
+  bearer = "dont-change",
+  output_location_type = "file",
+  variable = "Gap_Filled_DNB_BRDF-Corrected_NTL",
+  file_dir = file.path(here("data", "ntl_blackmarble", "puerto_rico"))
+)
+
+plot(ntl_0925_gapfilled_r)
+
+quality_0925_r <- bm_raster(
+  roi_sf = pri_0_sf,
+  product_id = "VNP46A2",
+  date = "2017-09-25",
+  bearer = "dont-change",
+  output_location_type = "file",
+  variable = "Mandatory_Quality_Flag",
+  file_dir = file.path(here("data", "ntl_blackmarble", "puerto_rico"))
+)
+
+plot(quality_0925_r)
+
+lastest_0925_r <- bm_raster(
+  roi_sf = pri_0_sf,
+  product_id = "VNP46A2",
+  date = "2017-09-25",
+  bearer = "dont-change",
+  output_location_type = "file",
+  variable = "Latest_High_Quality_Retrieval",
+  file_dir = file.path(here("data", "ntl_blackmarble", "puerto_rico"))
+)
+
+plot(lastest_0925_r)
+```
+
+#### Part 4B: Proportion of NA pixels daily
+
+Make a figure showing the proportion of NTL pixels that are `NA` across Puerto Rico daily two weeks before and after the Hurricane hit. Use the `DNB_BRDF-Corrected_NTL` variable.
+
+```{r prop_na, exercise = T, exercise.lines=30}
+#### Load data
+pr_sf <- read_sf(here("data", "gadm", "pri_adm0.geojson"))
+
+#### Get NTL data
+ntl_df <- bm_extract(
+  roi_sf = pri_0_sf,
+  product_id = "VNP46A2",
+  date = seq.Date(from = ymd("2017-09-20") - 14,
+                  to = ymd("2017-09-20") + 14,
+                  by = "day"),
+  bearer = "dont-change",
+  output_location_type = "file",
+  variable = "DNB_BRDF-Corrected_NTL",
+  file_dir = file.path(here("data", "ntl_blackmarble", "puerto_rico", "adm0"))
+)
+
+#### Plot
+
+```
+
+<details>
+<summary>Click to see solution</summary>
+```{r}
+#### Load data
+pr_0_sf <- read_sf(here("data", "gadm", "pri_adm0.geojson"))
+
+#### Get NTL data
+ntl_df <- bm_extract(
+  roi_sf = pri_0_sf,
+  product_id = "VNP46A2",
+  date = seq.Date(from = ymd("2017-09-20") - 14,
+                  to = ymd("2017-09-20") + 14,
+                  by = "day"),
+  bearer = "dont-change",
+  output_location_type = "file",
+  variable = "DNB_BRDF-Corrected_NTL",
+  file_dir = file.path(here("data", "ntl_blackmarble", "puerto_rico", "adm0"))
+)
+
+#### Plot
+ntl_df %>%
+  mutate(prop_na = 1 - prop_non_na_pixels) %>%
+  ggplot(aes(x = date,
+             y = prop_na)) +
+  geom_vline(xintercept = ymd("2017-09-20")) +
+  geom_line() +
+  labs(x = "Date",
+       y = "Proportion",
+       title = "Proportion NTL Pixels in Puerto Rico NA") +
+  theme_classic()
+```
+</details>
+
+<details>
+<summary>Click to see solution: More manual method, using rasters</summary>
+```{r}
+#### Load data
+pr_0_sf <- read_sf(here("data", "gadm", "pri_adm0.geojson"))
+
+#### Get rasters
+ntl_r <- bm_raster(
+  roi_sf = pri_0_sf,
+  product_id = "VNP46A2",
+  date = seq.Date(from = ymd("2017-09-20") - 14,
+                  to = ymd("2017-09-20") + 14,
+                  by = "day"),
+  bearer = "dont-change",
+  output_location_type = "file",
+  variable = "DNB_BRDF-Corrected_NTL",
+  file_dir = file.path(here("data", "ntl_blackmarble", "puerto_rico"))
+)
+
+#### Proportion NA
+ntl_df <- exact_extract(
+  ntl_r, 
+  pr_sf, 
+  function(values, coverage_fraction) {
+    # convert coverage_fraction to weights
+    w <- coverage_fraction
+    
+    # for each layer (column), compute proportion NA
+    apply(values, 2, function(col) {
+      sum(is.na(col) * w, na.rm = TRUE) / sum(w, na.rm = TRUE)
+    })
+  },
+  progress = F
+) 
+
+#### Clean dataframe
+ntl_df <- ntl_df %>%
+  as.data.frame() %>%
+  rownames_to_column(var = "date") %>%
+  dplyr::mutate(date = date %>%
+                  str_replace_all("t", "") %>%
+                  ymd()) %>%
+  dplyr::rename(prop_na = V1)
+
+#### Plot
+ntl_df %>%
+  ggplot(aes(x = date,
+             y = prop_na)) +
+  geom_vline(xintercept = ymd("2017-09-20")) +
+  geom_line() +
+  labs(x = "Date",
+       y = "Proportion",
+       title = "Proportion NTL Pixels in Puerto Rico NA") +
+  theme_classic()
+```
+</details>
+
+#### Part 4C: Plot daily NTL and latest retrieval
+
+We see there's quality issues with `DNB_BRDF-Corrected_NTL`. Let's see trends in gap filled daily data (`Gap_Filled_DNB_BRDF-Corrected_NTL`). For the two weeks before and after the Hurricane hit (Sept 20), plot:
+
+1. Daily trends in gap filled NTL (`Gap_Filled_DNB_BRDF-Corrected_NTL`)
+2. Average days of last retrieval for filling gap in NTL (`Latest_High_Quality_Retrieval`)
+
+```{r daily_ntl, exercise = T, exercise.lines=30}
+#### Load data
+pr_sf <- read_sf(here("data", "gadm", "pri_adm0.geojson"))
+
+#### Get NTL Data
+ntl_df <- bm_extract(
+  roi_sf = pri_0_sf,
+  product_id = "VNP46A2",
+  date = seq.Date(from = ymd("2017-09-20") - 14,
+                  to = ymd("2017-09-20") + 14,
+                  by = "day"),
+  bearer = bearer,
+  output_location_type = "file",
+  variable = "Gap_Filled_DNB_BRDF-Corrected_NTL",
+  aggregation_fun = "sum",
+  file_dir = file.path(here("data", "ntl_blackmarble", "puerto_rico", "adm0"))
+)
+
+#### Get Latest Retrieval Data
+latest_df <- bm_extract(
+  roi_sf = pri_0_sf,
+  product_id = "VNP46A2",
+  date = seq.Date(from = ymd("2017-09-20") - 14,
+                  to = ymd("2017-09-20") + 14,
+                  by = "day"),
+  bearer = bearer,
+  output_location_type = "file",
+  variable = "Latest_High_Quality_Retrieval",
+  aggregation_fun = "mean",
+  file_dir = file.path(here("data", "ntl_blackmarble", "puerto_rico", "adm0"))
+)
+
+#### Plot
+
+```
+
+<details>
+<summary>Click to see solution</summary>
+```{r}
+#### Load data
+pr_sf <- read_sf(here("data", "gadm", "pri_adm0.geojson"))
+
+#### Get NTL Data
+ntl_df <- bm_extract(
+  roi_sf = pri_0_sf,
+  product_id = "VNP46A2",
+  date = seq.Date(from = ymd("2017-09-20") - 14,
+                  to = ymd("2017-09-20") + 14,
+                  by = "day"),
+  bearer = bearer,
+  output_location_type = "file",
+  variable = "Gap_Filled_DNB_BRDF-Corrected_NTL",
+  aggregation_fun = "sum",
+  file_dir = file.path(here("data", "ntl_blackmarble", "puerto_rico", "adm0"))
+)
+
+#### Get Latest Retrieval Data
+latest_df <- bm_extract(
+  roi_sf = pri_0_sf,
+  product_id = "VNP46A2",
+  date = seq.Date(from = ymd("2017-09-20") - 14,
+                  to = ymd("2017-09-20") + 14,
+                  by = "day"),
+  bearer = bearer,
+  output_location_type = "file",
+  variable = "Latest_High_Quality_Retrieval",
+  aggregation_fun = "mean",
+  file_dir = file.path(here("data", "ntl_blackmarble", "puerto_rico", "adm0"))
+)
+
+#### Plot NTL
+ntl_df %>%
+  ggplot(aes(x = date,
+             y = ntl_sum)) +
+  geom_vline(xintercept = ymd("2017-09-20")) +
+  geom_line() +
+  labs(x = NULL,
+       y = "NTL Radiance")
+
+#### Plot NTL
+latest_df %>%
+  ggplot(aes(x = date,
+             y = ntl_mean)) +
+  geom_vline(xintercept = ymd("2017-09-20")) +
+  geom_line() +
+  labs(x = NULL,
+       y = "Avg days since\nNTL retrieval")
+```
+</details>
+
+## BlackMarbleR: Exercise 3 [New Highway in Pakistan]
+
 
