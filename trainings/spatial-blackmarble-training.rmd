@@ -2157,7 +2157,7 @@ lm_df %>%
 ```
 </details>
 
-### Additional Resources
+## Additional Resources
 
 __Spatial R Courses:__
 
