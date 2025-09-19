@@ -626,6 +626,7 @@ leaflet() %>%
 ## Raster Data
 
 __Summary of Functions__
+
 * `rast()`: Load file (eg, `.tif` file)
 * `plot()`: Basic raster plot
 * `ggplot() + geom_spatraster()`: Static map
@@ -2159,6 +2160,8 @@ lm_df %>%
 ### Additional Resources
 
 __Spatial R Courses:__
+
+* [DIME R Training](https://github.com/worldbank/dime-r-training) (Includes spatial training)
 
 __R Cheatsheets:__
 
