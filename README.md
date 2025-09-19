@@ -2,7 +2,7 @@
 title: "Monitoring Economies from Space Using Nighttime Lights"
 ---
 
-This material was jointly developed by the [DECDI ieConnect](https://www.worldbank.org/en/about/unit/unit-dec/impactevaluation/partnerships/ieconnect) team and the Development Data Group's Data Lab team as an introduction to using nighttime lights for economic analysis.
+This material was jointly developed by the [DECDI ieConnect](https://www.worldbank.org/en/about/unit/unit-dec/impactevaluation/partnerships/ieconnect) team and the Development Data Group's [Development Data Partnership](https://datapartnership.org) team as an introduction to using nighttime lights for economic analysis.
 
 # Course Motivation
 
@@ -12,7 +12,7 @@ Their paper helped launch the use of nighttime lights in a variety of applicatio
 
 Within the World Bank and other multilateral development banks, staff have used nighttime lights data in [estimating subnational GDP in countries like Kenya and Rwanda](https://blogs.worldbank.org/en/developmenttalk/night-lights-and-pursuit-subnational-gdp-application-kenya-rwanda), in [mapping electric grid infrastructure](https://blogs.worldbank.org/en/energy/using-night-lights-map-electrical-grid-infrastructure), [measuring quarterly economic growth](https://openknowledge.worldbank.org/server/api/core/bitstreams/ba5cb33b-9000-50c6-aa8c-498fbb7428c9/content) and [poverty mapping](https://openknowledge.worldbank.org/entities/publication/f6b0c7dc-d775-5dce-b887-7e9eb064de0e).  
 
-In the recent years, the DECDI and DECDG Data Lab teams have worked with units across the World Bank to provide nighttime lights analytics, especially in post disaster contexts. This work includes [Turkiye Earthquake Monitoring](https://datapartnership.org/turkiye-earthquake-impact/notebooks/nighttime-lights/README.html), [Gaza Conflict Impact Analysis](https://worldbank.github.io/gaza-israel-conflict-impact-analysis/notebooks/nighttime-lights/README.html) and [Sudan Conflict Impact Analysis](https://worldbank.github.io/sudan-nighttime-lights/nighttime_lights.html). This course is meant to empower staff to be able to query nightlight data themselves. 
+In the recent years, DECDI and the DECDG Development Data Partnership (formerly known as the Data Lab) have supported teams working on international development challenges with nighttime lights analytics, especially in post disaster contexts. This work includes [Turkiye Earthquake Monitoring](https://datapartnership.org/turkiye-earthquake-impact/notebooks/nighttime-lights/README.html), [Gaza Conflict Impact Analysis](https://worldbank.github.io/gaza-israel-conflict-impact-analysis/notebooks/nighttime-lights/README.html) and [Sudan Conflict Impact Analysis](https://worldbank.github.io/sudan-nighttime-lights/nighttime_lights.html). This course is meant to empower staff to be able to query nightlight data themselves. 
 
 # Course Description
 
