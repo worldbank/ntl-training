@@ -20,8 +20,12 @@ library(lubridate)
 
 # REQUIRED PARAMETERS ----------------------------------------------------------
 proj_dir <- "~/Desktop/NTL Analysis" # Directory for data; code will create this folder
-iso3_code    <- "NGA"          # ISO3 code for country
+iso3_code    <- "HTI"          # ISO3 code for country
 nasa_bearer <- "BEARER-TOKEN"  # NASA Bearer Token
+
+proj_dir <- "/Users/rmarty/Library/CloudStorage/OneDrive-WBG/Nighttime Lights - Haiti"
+nasa_bearer <- read_csv("~/Dropbox/bearer_bm.csv") %>%
+  pull(token)
 
 # OPTIONAL PARAMETERS ----------------------------------------------------------
 
@@ -34,6 +38,10 @@ month_start <- "2012-01-01"    # Start month to query
 month_end   <- Sys.Date() %>%  # End month to query
   floor_date(unit = "months") %>% 
   as.character()  
+
+## Days to query
+day_start <- "2025-01-01"
+day_end <- "2025-01-07"
 
 # Base year for % change maps
 pc_base_year <- 2019 
@@ -96,10 +104,6 @@ dir.create(ntl_bm_dir)
 dir.create(gadm_dir)
 dir.create(gas_flare_dir)
 
-#### Bearer
-nasa_bearer <- read_csv("~/Dropbox/bearer_bm.csv") %>%
-  pull(token)
-
 #### Theme
 theme_manual <- theme_classic2() +
   theme(strip.background = element_blank(),
@@ -158,6 +162,12 @@ if(!file.exists(OUT_PATH)){
 ntl_months <- seq.Date(from = ymd(month_start), 
                        to = ymd(month_end), 
                        by = "month") %>%
+  as.character()
+
+#### Days to Query
+ntl_days <- seq.Date(from = ymd(day_start), 
+                     to = ymd(day_end), 
+                     by = "day") %>%
   as.character()
 
 #### Colors
@@ -231,100 +241,39 @@ dir.create(file.path(gas_flare_dir, "finaldata"))
 
 #### Download data
 # https://datacatalog.worldbank.org/search/dataset/0037743
-if(!file.exists(file.path(gas_flare_dir, "rawdata", "viirs_global_flaring_2017.xlsx"))){
-  download.file(url = "https://datacatalogfiles.worldbank.org/ddh-published/0037743/DR0045623/viirs_global_flaring_d.7_slope_0.029353_2017_web_v1.xlsx?versionId=2023-01-18T20:03:32.2273754Z", 
-                destfile = file.path(gas_flare_dir, "rawdata", "viirs_global_flaring_2017.xlsx"), 
+if(!file.exists(file.path(gas_flare_dir, "rawdata", "global_flaring.xlsx"))){
+  download.file(url = "https://thedocs.worldbank.org/en/doc/bd2432bbb0e514986f382f61b14b2608-0400072025/related/2012-2024-Flare-Volume-Estimates-by-individual-Flare-Location.xlsx", 
+                destfile = file.path(gas_flare_dir, "rawdata", "global_flaring.xlsx"), 
                 mode = "wb")
 }
 
-if(!file.exists(file.path(gas_flare_dir, "rawdata", "viirs_global_flaring_2018.xlsx"))){
-  download.file(url = "https://datacatalogfiles.worldbank.org/ddh-published/0037743/DR0045622/viirs_global_flaring_d.7_slope_0.029353_2018_web.xlsx?versionId=2023-01-18T20:02:43.3965005Z", 
-                destfile = file.path(gas_flare_dir, "rawdata", "viirs_global_flaring_2018.xlsx"), 
-                mode = "wb")
-}
+gf_df <- read_xlsx(file.path(gas_flare_dir, "rawdata", "global_flaring.xlsx")) 
 
-if(!file.exists(file.path(gas_flare_dir, "rawdata", "viirs_global_flaring_2019.xlsx"))){
-  download.file(url = "https://datacatalogfiles.worldbank.org/ddh-published/0037743/DR0045621/viirs_global_flaring_d.7_slope_0.029353_2019_web_v20201114-3.xlsx?versionId=2023-01-18T20:03:09.2456111Z", 
-                destfile = file.path(gas_flare_dir, "rawdata", "viirs_global_flaring_2019.xlsx"), 
-                mode = "wb")
-}
+gf_df <- gf_df %>%
+  clean_names() 
 
-if(!file.exists(file.path(gas_flare_dir, "rawdata", "viirs_global_flaring_2020.xlsx"))){
-  download.file(url = "https://datacatalogfiles.worldbank.org/ddh-published/0037743/DR0084248/2020%20Global%20Gas%20Flaring%20Volumes.xlsx?versionId=2023-01-18T20:03:53.8309309Z", 
-                destfile = file.path(gas_flare_dir, "rawdata", "viirs_global_flaring_2020.xlsx"), 
-                mode = "wb")
-}
+gf_sf <- gf_df %>%
+  st_as_sf(coords = c("longitude", "latitude"),
+           crs = 4326)
 
-if(!file.exists(file.path(gas_flare_dir, "rawdata", "viirs_global_flaring_2021.xlsx"))){
-  download.file(url = "https://datacatalogfiles.worldbank.org/ddh-published/0037743/DR0087112/2021%20Global%20Gas%20Flaring%20Volumes.xlsx?versionId=2023-01-18T20:02:21.4951166Z", 
-                destfile = file.path(gas_flare_dir, "rawdata", "viirs_global_flaring_2021.xlsx"), 
-                mode = "wb")
-}
+roi_sf <- load_gadm(0)
 
-#### Append data
-clean_data <- function(x){
-  x %>% 
-    clean_names() %>% 
-    dplyr::filter(iso_code %in% iso3_code)
-} 
-
-df_2021 <- read_xlsx(file.path(gas_flare_dir, "rawdata", "viirs_global_flaring_2021.xlsx"), 2) %>% clean_data()
-
-df_2020_1 <- read_xlsx(file.path(gas_flare_dir, "rawdata", "viirs_global_flaring_2020.xlsx"), 1) %>% clean_data()
-df_2020_2 <- read_xlsx(file.path(gas_flare_dir, "rawdata", "viirs_global_flaring_2020.xlsx"), 2) %>% clean_data()
-df_2020_3 <- read_xlsx(file.path(gas_flare_dir, "rawdata", "viirs_global_flaring_2020.xlsx"), 3) %>% clean_data()
-
-df_2019 <- read_xlsx(file.path(gas_flare_dir, "rawdata", "viirs_global_flaring_2019.xlsx"), 1) %>% clean_data()
-
-df_2018_4 <- read_xlsx(file.path(gas_flare_dir, "rawdata", "viirs_global_flaring_2018.xlsx"), 4) %>% clean_data()
-df_2018_5 <- read_xlsx(file.path(gas_flare_dir, "rawdata", "viirs_global_flaring_2018.xlsx"), 5) %>% clean_data()
-df_2018_6 <- read_xlsx(file.path(gas_flare_dir, "rawdata", "viirs_global_flaring_2018.xlsx"), 6) %>% clean_data()
-
-df_2017_1 <- read_xlsx(file.path(gas_flare_dir, "rawdata", "viirs_global_flaring_2017.xlsx"), 1) %>% clean_data()
-df_2017_2 <- read_xlsx(file.path(gas_flare_dir, "rawdata", "viirs_global_flaring_2017.xlsx"), 2) %>% clean_data()
-df_2017_3 <- read_xlsx(file.path(gas_flare_dir, "rawdata", "viirs_global_flaring_2017.xlsx"), 3) %>% clean_data()
-
-gs_df <- bind_rows(
-  df_2021,
-  df_2020_1,
-  df_2020_2,
-  df_2020_3,
-  df_2019,
-  df_2018_4,
-  df_2018_5,
-  df_2018_6,
-  df_2017_1,
-  df_2017_2,
-  df_2017_3
-)
-
-if(nrow(gs_df) > 0){
-  gs_df <- gs_df %>%
-    dplyr::select(latitude, longitude) %>%
-    distinct() %>%
-    dplyr::mutate(uid = 1:n())
+inter_tf <- st_intersects(gf_sf, roi_sf, sparse = F) %>% as.vector()
+if(sum(inter_tf) > 0){
+  gf_sf <- gf_sf[inter_tf,]
   
-  gs_sf <- gs_df %>% 
-    st_as_sf(coords = c("longitude", "latitude"),
-             crs = 4326)
+  gf_5km_sf <- gf_sf %>% st_buffer(dist = 5000)
+  gf_10km_sf <- gf_sf %>% st_buffer(dist = 10000)
   
-  gs_5km_sf <- gs_sf %>%
-    st_buffer(dist = 5000)
-  
-  gs_10km_sf <- gs_sf %>%
-    st_buffer(dist = 10000)
-  
+  saveRDS(gs_df, file.path(gas_flare_dir, "finaldata", "gas_flare_locations.Rds"))
+  saveRDS(gs_5km_sf, file.path(gas_flare_dir, "finaldata", "gas_flare_locations_5km.Rds"))
+  saveRDS(gs_10km_sf, file.path(gas_flare_dir, "finaldata", "gas_flare_locations_10km.Rds"))
 } else{
-  
-  gs_df <- data.frame(NULL)
-  gs_5km_sf <- data.frame(NULL)
-  gs_10km_sf <- data.frame(NULL)
-  
+  saveRDS(data.frame(NULL), file.path(gas_flare_dir, "finaldata", "gas_flare_locations.Rds"))
+  saveRDS(data.frame(NULL), file.path(gas_flare_dir, "finaldata", "gas_flare_locations_5km.Rds"))
+  saveRDS(data.frame(NULL), file.path(gas_flare_dir, "finaldata", "gas_flare_locations_10km.Rds"))
 }
 
-saveRDS(gs_df, file.path(gas_flare_dir, "finaldata", "gas_flare_locations.Rds"))
-saveRDS(gs_5km_sf, file.path(gas_flare_dir, "finaldata", "gas_flare_locations_5km.Rds"))
-saveRDS(gs_10km_sf, file.path(gas_flare_dir, "finaldata", "gas_flare_locations_10km.Rds"))
 ```
 
 ## Download Nighttime Lights
@@ -354,6 +303,13 @@ r <- bm_raster(roi_sf = roi_sf,
                bearer = nasa_bearer,
                output_location_type = "file",
                file_dir = file.path(ntl_bm_dir, "rasters", "monthly"))
+
+r <- bm_raster(roi_sf = roi_sf,
+               product_id = "VNP46A2",
+               date = ntl_days,
+               bearer = nasa_bearer,
+               output_location_type = "file",
+               file_dir = file.path(ntl_bm_dir, "rasters", "daily"))
 ```
 
 ## Aggregate Nighttime Lights
@@ -367,7 +323,7 @@ dir.create(file.path(ntl_bm_dir, "aggregated_individual_files"))
 #### Setup loops
 for(unit in c(gadm_names,
               "cities")){
-  for(time_type in c("annual", "monthly")){
+  for(time_type in c("annual", "monthly", "daily")){
     
     if(time_type == "annual"){
       time_vec <- year_start:year_end
@@ -375,6 +331,10 @@ for(unit in c(gadm_names,
     
     if(time_type == "monthly"){
       time_vec <- ntl_months
+    }
+    
+    if(time_type == "daily"){
+      time_vec <- ntl_days
     }
     
     for(time_i in time_vec){
