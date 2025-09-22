@@ -1,0 +1,48 @@
+/* Custom styles for the NTL training website */
+
+.navbar-brand {
+  font-weight: bold;
+}
+
+.sidebar-navigation {
+  font-size: 0.9em;
+}
+
+pre {
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 0.25rem;
+  padding: 1rem;
+}
+
+code {
+  background-color: #f8f9fa;
+  padding: 0.1em 0.3em;
+  border-radius: 0.2em;
+}
+
+.cell-output-display {
+  margin: 1em 0;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: #2c3e50;
+}
+
+a {
+  color: #3498db;
+}
+
+a:hover {
+  color: #2980b9;
+}
+
+.btn-primary {
+  background-color: #3498db;
+  border-color: #3498db;
+}
+
+.btn-primary:hover {
+  background-color: #2980b9;
+  border-color: #2980b9;
+}
