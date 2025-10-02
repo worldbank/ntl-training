@@ -383,8 +383,20 @@ for(unit in c(gadm_names,
             str_replace_all("-", "_")
         }
         
-        r_path <- file.path(ntl_bm_dir, "rasters", time_type, 
-                            paste0(bm_product,"_NearNadir_Composite_Snow_Free_qflag_t",time_raster_i,".tif"))
+        if(time_type == "daily"){
+          bm_product <- "VNP46A2"
+          
+          time_raster_i <- time_i %>% 
+            str_replace_all("-", "_")
+        }
+        
+        if(bm_product == "VNP46A2"){
+          r_path <- file.path(ntl_bm_dir, "rasters", time_type, 
+                              paste0(bm_product,"_Gap_Filled_DNB_BRDF-Corrected_NTL_qflag_t",time_raster_i,".tif"))
+        } else{
+          r_path <- file.path(ntl_bm_dir, "rasters", time_type, 
+                              paste0(bm_product,"_NearNadir_Composite_Snow_Free_qflag_t",time_raster_i,".tif"))
+        }
         
         if(file.exists(r_path)){
           
@@ -439,7 +451,7 @@ dir.create(file.path(ntl_bm_dir, "aggregated"))
 
 for(unit in c(gadm_names,
               "cities")){
-  for(time_type in c("annual", "monthly")){
+  for(time_type in c("annual", "monthly", "daily")){
     
     ntl_df <- file.path(ntl_bm_dir, "aggregated_individual_files", unit, time_type) %>%
       list.files(full.names = T,
