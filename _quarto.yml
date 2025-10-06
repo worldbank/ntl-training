@@ -26,6 +26,10 @@ website:
         text: Training Materials
       # - href: ntl-diagnostic-code/
       #   text: Country Diagnostics
+    right:
+      - icon: github
+        href: https://github.com/worldbank/ntl-training
+        text: GitHub
     
   # sidebar:
   #   - title: "Using BlackMarbleR"
