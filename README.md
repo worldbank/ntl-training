@@ -18,7 +18,28 @@ In the recent years, DECDI and the DECDG Development Data Partnership (formerly 
 
 This course provides an overview of using nighttime lights data, with a focus for economic applications. It covers the different sources of nighttime lights, how to query and aggregate data, and addressing data quality with nighttime lights (e.g., cloud cover). The course focuses on [NASA Black Marble](https://blackmarble.gsfc.nasa.gov/) data, using the [BlackMarbleR](https://worldbank.github.io/blackmarbler/) (for R) and [BlackMarblePy](https://github.com/worldbank/blackmarblepy) (for Python) packages for querying data.
 
-# Prerequisites
+## Day 1: Applications and Limitations of Nighttime Lights for International Development (
+
+In this session, participants will learn about:
+
+• History of Nighttime Lights (NTL): Evolution and significance of satellite-based light data.
+• Key Nightlight Data Products (DMSP and VIIRS) : Differences in temporal and spatial coverage, data sources, as well as data processing methods.
+• Use Cases in Economics & Social Sciences: Applications inside and outside the World Bank, along with common limitations of NTL.
+• Practical Access: How to retrieve and work with Nighttime Lights data using existing World Bank packages.
+The target audience for Day 1 includes TTLs, economists and senior specialists in economic monitoring teams, disaster needs assessment teams and urban planning teams.
+
+## Day 2: Hands-On Tutorial on Analyzing Nightlights with BlackMarbleR.
+
+This session will provide hands-on training on querying and analyzing nighttime lights data using VIIRS NTL data from BlackMarble. Participants will learn to use BlackMarbleR to extract, process and analyse NTL data. In this session participants will learn to:
+
+• Understand the BlackMarbleR Package
+• Extract Nightlight Raster Data
+• Create Maps of Raster Data
+• Conduct Zonal Statistics on the Raster Data
+• Exclude/Include Gas Flaring Locations
+• Analyze Nightlight Data post disaster
+
+## Prerequisites
 
 The course assumes familiarity with R or Python. For an introduction to these programming languages, see the DIME Analytics [R training](https://github.com/worldbank/dime-r-training) and the DIME Analytics and DECID [Python training](https://github.com/worldbank/dec-python-course).
 

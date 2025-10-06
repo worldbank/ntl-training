@@ -170,3 +170,30 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 .Rproj.user
+
+# Local Quarto installation files
+quarto-1.4.554-*.tar.gz
+quarto-1.4.554-*.pkg
+quarto-extracted/
+bin/
+share/
+quarto-1.4.554/
+
+# macOS
+.DS_Store
+
+# R Project files (not needed for GitHub Actions)
+*.Rproj
+
+# R Markdown cache (we use _freeze instead)
+*_cache/
+*_files/
+
+# Built documentation (GitHub Actions creates this)
+docs/
+
+# Quarto working directory
+.quarto/
+
+# Local development containers
+.devcontainer/

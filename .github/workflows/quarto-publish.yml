@@ -75,6 +75,8 @@ jobs:
             any::countrycode
             any::haven
             any::ggnewscale
+            any::h3jsr
+            any::fixest
           cache-version: 2
 
       - name: Render Quarto Project
