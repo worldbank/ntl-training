@@ -1,6 +1,6 @@
 ---
 title: "Monitoring Economies Through Space Using Nighttime Lights"
-subtitle: "World Bank Training Course"
+subtitle: "World Bank Workshop"
 authors: 
   - "Robert Marty, Data Scientist, DECDI"
   - "Sahiti Sarva, Data Scientist, DECDG"
@@ -9,6 +9,8 @@ organization: "World Bank"
 ---
 
 # Monitoring Economies from Space Using Nightlights
+
+> **Presentation Conducted on 1st October 2025**: [Access the original PowerPoint presentation](https://worldbankgroup.sharepoint.com.mcas.ms/:p:/r/teams/DevelopmentDataPartnershipCommunity-WBGroup/_layouts/15/Doc.aspx?sourcedoc=%7BCB01FC45-80A0-41FD-A2F2-25B5EAE0FF49%7D&file=Monitoring%20Economies%20Through%20Space%20Using%20Nighttime%20Lights.pptx&action=edit&mobileredirect=true)
 
 ## Outline
 
@@ -89,7 +91,7 @@ VIIRS has higher, improved radiometric resolution, and is not saturated, unlike 
 | **On-board Calibration** | No | Yes |
 | **Pixel Saturated** | Yes | No |
 
-*References: Tu et al. (2020), Li et al. (2020)*
+*References: [Li et al. (2020)](https://www.nature.com/articles/s41597-020-0510-y), [Tu et al. (2020)](https://www.tandfonline.com/doi/full/10.1080/01431161.2020.1731935)*
 
 ---
 
@@ -111,7 +113,7 @@ VIIRS has higher, improved radiometric resolution, and is not saturated, unlike 
 #### Outlier Removal
 - **Process**: In creating monthly/annual data, Black Marble drops daily outliers (also done in Colorado School of Mines V2)
 
-*For more info, see The Spatial Edge (Yohan Iddawela)*
+*For more info, see [The Spatial Edge (Yohan Iddawela)](https://www.spatialedge.co/p/not-all-nightlight-datasets-are-the)*
 
 ---
 
@@ -127,7 +129,9 @@ Provides multiple datasets for annual data:
 - **Combined / "All Angle"**
 
 ### Research Findings
-Wang et al. (2018): Comparing Dubai and Rome, found that near-nadir was brighter but varied more, while off-nadir was less bright but varied less.
+[Wang et al. (2018)](https://ieeexplore.ieee.org/abstract/document/9779217): Comparing Dubai and Rome, found that near-nadir was brighter but varied more, while off-nadir was less bright but varied less.
+
+*For more info, see [The Spatial Edge (Yohan Iddawela)](https://www.spatialedge.co/p/not-all-nightlight-datasets-are-the) and [European Space Imaging](https://www.euspaceimaging.com/blog/2024/01/31/what-is-ona-off-nadir-angle-in-satellite-imagery/)*
 
 ---
 
@@ -145,6 +149,8 @@ Wang et al. (2018): Comparing Dubai and Rome, found that near-nadir was brighter
 - **Without snow control**: Large spike in January 2021
 - **With snow control**: No spike in January 2021
 
+*For more info, see [The Spatial Edge (Yohan Iddawela)](https://www.spatialedge.co/p/not-all-nightlight-datasets-are-the)*
+
 ---
 
 ## BlackMarble: Stray Light Limitation
@@ -157,6 +163,8 @@ Wang et al. (2018): Comparing Dubai and Rome, found that near-nadir was brighter
 ### Black Marble
 - **Approach**: Drops pixels contaminated by stray light
 - **Impact**: Contains many missing values for northern countries from June - August
+
+*For more info, see [The Spatial Edge (Yohan Iddawela)](https://www.spatialedge.co/p/not-all-nightlight-datasets-are-the)*
 
 ---
 
@@ -213,8 +221,10 @@ Nighttime lights can be impacted by a number of factors, particularly cloud cove
 - **Upscale DMSP-OLS**: Create "VIIRS-like" data (relies on using other imagery, such as daytime imagery, for upscaling)
 
 ### Example Datasets
-- **{Downscale VIIRS}**: A harmonized global nighttime light dataset 1992–2018 (Li et al, 2020) [dataset] Updated beyond 2018
-- **{Upscale DMSP}**: A global annual simulated VIIRS nighttime light dataset from 1992 to 2023 (Chen et al, 2024)
+- **{Downscale VIIRS}**: [A harmonized global nighttime light dataset 1992–2018](https://www.nature.com/articles/s41597-020-0510-y) (Li et al, 2020) [[dataset](https://figshare.com/articles/dataset/Harmonization_of_DMSP_and_VIIRS_nighttime_light_data_from_1992-2018_at_the_global_scale/9828827/8)] *Updated beyond 2018*
+- **{Upscale DMSP}**: [A global annual simulated VIIRS nighttime light dataset from 1992 to 2023](https://www.nature.com/articles/s41597-024-04228-6) (Chen et al, 2024) [[dataset](https://figshare.com/articles/dataset/A_history_reconstructed_time_series_1992-2011_of_annual_global_NPP-VIIRS-V2-like_nighttime_light_data_through_Super-resolution_U-Net_model/22262545/8)]
+
+*Reference: [Li et al., 2020](https://www.nature.com/articles/s41597-020-0510-y)*
 
 ---
 
@@ -230,6 +240,8 @@ Nighttime lights can be impacted by a number of factors, particularly cloud cove
 # Uses of Nightlights in Economics and Social Sciences
 
 > **Key Insight**: Leveraging nighttime lights requires appreciating what does and does not generate lights
+
+*Reference: [Earth at night (2022)](https://www.nasa.gov/wp-content/uploads/2019/11/earth_at_night_508.pdf)*
 
 ---
 
@@ -256,6 +268,8 @@ Nighttime lights can be impacted by a number of factors, particularly cloud cove
 - Auroras and Atmospheric Phenomena
 
 **Less Light**
+
+*Reference: [Earth at night (2022)](https://www.nasa.gov/wp-content/uploads/2019/11/earth_at_night_508.pdf)*
 
 ### Economic Activity Correlation
 
@@ -293,18 +307,18 @@ Aggregating night lights differently creates different indicators:
 ## Center of Gravity of Light
 
 ### Movement in the Economic Center of Russia
-**Application**: The central point where light is concentrated in a country was used as a proxy for economic centers (Hande et al., 2025)
+**Application**: The central point where light is concentrated in a country was used as a proxy for economic centers ([Hande et al., 2025](https://xkdr.org/paper/shedding-light-on-the-russia-ukraine-war))
 
-**Global Analysis**: A global analysis of the same was done with DMSP data to show the movement of global economic centers eastward from 1992 to 2009 (Cauwels, Pestalozzi, & Sornette, 2014)
+**Global Analysis**: A global analysis of the same was done with DMSP data to show the movement of global economic centers eastward from 1992 to 2009 ([Cauwels, Pestalozzi, & Sornette, 2014](https://app.amanote.com/v4.5.5/research/note-taking?resourceId=w6yiAnQBKQvf0BhiwH82))
 
 ---
 
 ## Nighttime Lights and Urbanization
 
 ### Threshold Detection of Urban Areas
-**CIESIN Collaboration**: CIESIN in collaboration with the World Bank used a threshold value after aggregating nightlights to determine city limits.
+**CIESIN Collaboration**: [CIESIN in collaboration with the World Bank](https://openknowledge.worldbank.org/server/api/core/bitstreams/adf744b4-8f0d-5f61-a72e-ac1f7d2ae99d/content) used a threshold value after aggregating nightlights to determine city limits.
 
-**Electrification Studies**: Threshold values were also used in studies to identify electrification of areas.
+**Electrification Studies**: Threshold values were also used in studies to identify [electrification of areas](https://blogs.worldbank.org/en/energy/using-night-lights-map-electrical-grid-infrastructure).
 
 ---
 
@@ -328,17 +342,17 @@ Aggregating night lights differently creates different indicators:
 ## Key Research Findings
 
 ### GDP Correlation Studies
-- **Henderson et al. (2012)**: Nighttime lights correlated with levels and changes (long difference) in GDP
-- **Hu and Yao (2019)**: NTL correlates with GDP. Elasticity of lights to GDP systematically varies by a country's income level. Can be as high as 2.3 for low-income countries and close to 0 for high income countries
-- **Gibson et al. (2021)**: VIIRS provides a more accurate proxy to GDP than DMSP-OLS
-- **Martinez (2022)**: Finds that the elasticity of lights to GDP is larger in authoritarian regimes, suggested overstating annual GDP growth
-- **Mellander et al. (2015)**: Using firm data in Sweden, shows NTL strongly associated with establishment density and population; weaker association with wages. For some indicators, lights overestimates in urban areas and underestimates in rural areas
+- **[Henderson et al. (2012)](https://pubs.aeaweb.org/doi/pdfplus/10.1257/aer.102.2.994)**: Nighttime lights correlated with levels and changes (long difference) in GDP
+- **[Hu and Yao (2019)](https://www.econ2.jhu.edu/people/hu/paper_HUandYAO.pdf)**: NTL correlates with GDP. Elasticity of lights to GDP systematically varies by a country's income level. Can be as high as 2.3 for low-income countries and close to 0 for high income countries
+- **[Gibson et al. (2021)](https://www.sciencedirect.com/science/article/pii/S0304387820301772)**: VIIRS provides a more accurate proxy to GDP than DMSP-OLS
+- **[Martinez (2022)](https://www.journals.uchicago.edu/doi/10.1086/720458?)**: Finds that the elasticity of lights to GDP is larger in authoritarian regimes, suggested overstating annual GDP growth
+- **[Mellander et al. (2015)](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0139779)**: Using firm data in Sweden, shows NTL strongly associated with establishment density and population; weaker association with wages. For some indicators, lights overestimates in urban areas and underestimates in rural areas
 
 ---
 
 ## Case Study: Mexican Municipalities
 
-**Analysis by Hugo Foster & Marie Lechler (2022)**
+**Analysis by [Hugo Foster & Marie Lechler (2022)](https://www.spglobal.com/market-intelligence/en/news-insights/research/how-nighttime-lights-illuminate-economic-activity)**
 
 ### Key Findings
 - **Border Effects**: More luminosity than expected, given population, in key border crossing locations with large cargo infrastructure & manufacturing activities. Less luminosity than expected given population in poorer locations
@@ -371,6 +385,8 @@ Aggregating night lights differently creates different indicators:
 
 ### Agricultural Limitations
 **Weak Agricultural Signal**: The weak signature of agricultural light makes NTL a weaker proxy for agricultural GDP in comparison to manufacturing
+
+*Reference: [The Spatial Edge](https://www.spatialedge.co/p/some-surprising-facts-about-nightlights)*
 
 ---
 
@@ -408,10 +424,10 @@ Aggregating night lights differently creates different indicators:
 - **Heterogeneity Analysis**: Explore heterogeneity in results by baseline NTL
 
 ### Research Examples
-- **Chen et al. (2023)**: Rural road connectivity and local economic activity: Evidence from Sri Lanka's iRoad Program. Rural roads with improved connectivity showed higher nighttime luminosity compared to areas without improved connectivity
-- **BenYishay et al. (2018)**: Evaluation of road upgrades in Palestine. Find positive effects, particularly in areas with higher baseline luminosity
-- **Alder (2025)**: Chinese roads in India: The effect of transport infrastructure on economic development. India's network of highways led to gains in economic activity but had unequal effects across regions
-- **Bolivar (2022)**: Roads illuminate development: Using nighttime luminosity to assess the impact of transport infrastructure. In Bolivia, Paraguay, and Ecuador, municipalities that benefited from paved major roads saw more economic activity compared to control locations
+- **[Chen et al. (2023)](https://www.sciencedirect.com/science/article/pii/S0967070X23002603)**: Rural road connectivity and local economic activity: Evidence from Sri Lanka's iRoad Program. Rural roads with improved connectivity showed higher nighttime luminosity compared to areas without improved connectivity
+- **[BenYishay et al. (2018)](https://docs.aiddata.org/ad4/pdfs/West_Bank_Infrastructure_GIE_Report.pdf)**: Evaluation of road upgrades in Palestine. Find positive effects, particularly in areas with higher baseline luminosity
+- **[Alder (2025)](https://www.sciencedirect.com/science/article/pii/S0022199625000972)**: Chinese roads in India: The effect of transport infrastructure on economic development. India's network of highways led to gains in economic activity but had unequal effects across regions
+- **[Bolivar (2022)](https://scioteca.caf.com/bitstream/handle/123456789/1955/Roads%20illuminate%20development%20Using%20nightlight%20luminosity%20to%20assess%20the%20impact%20of%20transport%20infraestructure.pdf?sequence=4&isAllowed=y)**: Roads illuminate development: Using nighttime luminosity to assess the impact of transport infrastructure. In Bolivia, Paraguay, and Ecuador, municipalities that benefited from paved major roads saw more economic activity compared to control locations
 
 ---
 
@@ -421,13 +437,13 @@ Aggregating night lights differently creates different indicators:
 **To what extent can nighttime lights capture rural electrification programs?**
 
 ### Detection Studies
-- **Min et al. (2013)**: Detection of rural electrification in DMSP-OLS night lights imagery. Using sample of villages in Senegal and Mali, finds that electrified villages are brighter than unelectrified villages. Appear brighter largely because of the presence of streetlights; correlation of light output with household electricity use was low
-- **Dugoua et al. (2018)**: Satellite data for the social sciences: measuring rural electrification with night-time lights. Nighttime lights provides an accurate measure of rural electrification in India, but detects electrification less accurately when the supply of power is intermittent
-- **Min and Gaba (2014)**: Tracking Electrification in Vietnam Using Nighttime Lights. Find a one-point increase in DMSP-OLS DN for every 60-70 additional streetlights and 240-270 electrified homes
+- **[Min et al. (2013)](https://www.tandfonline.com/doi/abs/10.1080/01431161.2013.833358)**: Detection of rural electrification in DMSP-OLS night lights imagery. Using sample of villages in Senegal and Mali, finds that electrified villages are brighter than unelectrified villages. Appear brighter largely because of the presence of streetlights; correlation of light output with household electricity use was low
+- **[Dugoua et al. (2018)](https://www.tandfonline.com/doi/full/10.1080/01431161.2017.1420936?utm_source=chatgpt.com)**: Satellite data for the social sciences: measuring rural electrification with night-time lights. Nighttime lights provides an accurate measure of rural electrification in India, but detects electrification less accurately when the supply of power is intermittent
+- **[Min and Gaba (2014)](https://www.mdpi.com/2072-4292/6/10/9511)**: Tracking Electrification in Vietnam Using Nighttime Lights. Find a one-point increase in DMSP-OLS DN for every 60-70 additional streetlights and 240-270 electrified homes
 
 ### Program Evaluation Examples
-- **Burlig and Preonas (2024)**: Out of the Darkness and into the Light? Development Effects of Rural Electrification. Evaluation of India's national electrification program, RGGVY
-- **Berthelemy (2024)**: Using Night-Time Light to Estimate the Impact of Mini-Grid Electrification Projects on Electric Power Consumption: Analytical Background and Case Study in Madagascar. Uses lights to evaluate mini-grid project. Find a positive impact; also find that positive impact could be overestimated by one third if street lighting is not taken into account
+- **[Burlig and Preonas (2024)](https://www.journals.uchicago.edu/doi/epdf/10.1086/730204)**: Out of the Darkness and into the Light? Development Effects of Rural Electrification. Evaluation of India's national electrification program, RGGVY
+- **[Berthelemy (2024)](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4812767)**: Using Night-Time Light to Estimate the Impact of Mini-Grid Electrification Projects on Electric Power Consumption: Analytical Background and Case Study in Madagascar. Uses lights to evaluate mini-grid project. Find a positive impact; also find that positive impact could be overestimated by one third if street lighting is not taken into account
 
 ---
 
@@ -439,8 +455,8 @@ Aggregating night lights differently creates different indicators:
 **Challenge**: Nighttime lights too coarse a measure to be a strong proxy for poverty/wealth estimation alone.
 
 ### Research Examples
-- **{Satellite imagery}**: Jean et al. (2016) and Yeh et al. (2020) combine nighttime lights and daytime imagery to predict poverty measured from DHS in 5 African countries (Jean et al) and across Africa (Yeh et al)
-- **{Satellite imagery and beyond}**: Pokhriyal and Jacques (2017) and Marty and Duhaut (2024) use nighttime lights, daytime imagery, and other sources such as CDR data, Facebook data, etc, for poverty estimation
+- **{Satellite imagery}**: [Jean et al. (2016)](https://www.science.org/doi/epdf/10.1126/science.aaf7894) and [Yeh et al. (2020)](https://www.nature.com/articles/s41467-020-16185-w) combine nighttime lights and daytime imagery to predict poverty measured from DHS in 5 African countries (Jean et al) and across Africa (Yeh et al)
+- **{Satellite imagery and beyond}**: [Pokhriyal and Jacques (2017)](https://www.pnas.org/doi/10.1073/pnas.1700319114) and [Marty and Duhaut (2024)](https://www.nature.com/articles/s41598-023-49564-6) use nighttime lights, daytime imagery, and other sources such as CDR data, Facebook data, etc, for poverty estimation
 
 ---
 
@@ -452,7 +468,7 @@ Use finer scale data sources that suggest the likelihood of where lights are/are
 ### Common Approach: NDVI
 **Vegetation Index**: One common source is NDVI (vegetation). Lights less likely to come from pixels with high NDVI/vegetation values.
 
-**References**: Wu et al. (2024), Liu et al. (2022), Guo et al. (2024)
+**References**: [Wu et al. (2024)](https://ieeexplore.ieee.org/document/10707291), [Liu et al. (2022)](https://www.mdpi.com/2072-4292/14/24/6400), [Guo et al. (2024)](https://www.sciencedirect.com/science/article/pii/S1569843224002784)
 
 ---
 
@@ -553,3 +569,38 @@ Use finer scale data sources that suggest the likelihood of where lights are/are
 ## Thank You
 
 *This presentation provides a comprehensive overview of using nighttime lights for economic monitoring and analysis. For more detailed information and hands-on training, please refer to the accompanying training materials and resources.*
+
+---
+
+# Additional Research Applications
+
+## Urban and Population Analysis
+- Identify extents of urban areas [[link](https://www.sciencedirect.com/science/article/abs/pii/S0034425797000461)]
+- Estimate urban population size and density [[link](https://www.tandfonline.com/doi/full/10.1080/01431160802430693)]
+
+## Energy and Environmental Applications
+- Measure electricity use, energy consumption, and GHG emissions [[link](https://www.tandfonline.com/doi/full/10.1080/01431160903261005)]
+- Estimating offshore oil production [[link](https://www.sciencedirect.com/science/article/abs/pii/S0924271620301453)]
+
+## Economic Activity Monitoring
+- Proxy for economic activity / GDP [[link 1](https://www.aeaweb.org/articles?id=10.1257/aer.102.2.994)] and [[link 2](https://www.pnas.org/doi/10.1073/pnas.1017031108#sec-5)]
+
+## Crisis and Impact Assessment
+- Natural disaster, conflict, etc damages [[link 1](https://www.sciencedirect.com/science/article/abs/pii/S0143622819308525)], [[link 2](https://www.mdpi.com/2072-4292/10/6/858)]
+- Impact of infrastructure / policies (e.g., roads) [[link 1](https://www.aiddata.org/publications/evaluation-of-usaid-west-bank-gaza-infrastructure-needs-program)], [[link 2](https://docs.iza.org/dp12018.pdf)], [[link 3](https://documents.worldbank.org/en/publication/documents-reports/documentdetail/099332404062230683/idu073a7158605532046490b712098aed9008539)]
+
+## Summary of Key Insights
+
+### Nighttime Lights Data Sources
+- **Two sources of raw data**: DMSP-OLS and VIIRS. VIIRS goes until present and is better in many ways (e.g., more granular)
+- **Two sources of processed VIIRS data**: Colorado School of Mines & Black Marble
+  - Black Marble is more recent & makes additional corrections (snow, vegetation)
+  - Black Marble provides additional choice on NTL variable
+    - Daily: Gap filled vs not gap filled
+    - Monthly/Annually: Angle & snow correction
+
+### Applications of Nighttime Lights
+- **Wide use** of nighttime lights in social science research, from GDP to urbanization
+- **Key consideration**: Think about what does and does not contribute to NTL (e.g., manufacturing vs service sector; agriculture and forestry)
+- **Spatial control**: With nighttime lights, we can control which pixels we use to spatially aggregate. Do we exclude gas flaring locations? Do we only include lights in city boundaries?
+- **Data integration**: Combining lights with other sources enhances analytical capabilities
