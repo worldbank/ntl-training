@@ -3,6 +3,9 @@ project:
   output-dir: docs
   render:
     - README.md
+    - r-studio-setup.md
+    - monitoring-economies-through-space.md
+    - trainings/spatial-blackmarble-training.rmd
 
 website:
   title: "Nighttime Lights for Economic Analysis"
@@ -15,8 +18,12 @@ website:
     left:
       - href: README.md
         text: Home
-      # - href: trainings/
-      #   text: Training Materials
+      - href: r-studio-setup.html
+        text: R Studio Setup
+      - href: monitoring-economies-through-space.html
+        text: Presentation Materials
+      - href: trainings/spatial-blackmarble-training.html
+        text: Training Materials
       # - href: ntl-diagnostic-code/
       #   text: Country Diagnostics
     
@@ -28,6 +35,18 @@ website:
   #       - trainings/03_spatial_analysis_blackmarbler.qmd
   #   - title: "Diagnostics"
   #     contents:
+
+  sidebar:
+    - title: "Training Materials"
+      contents:
+        - text: "Home"
+          href: README.md
+        - text: "R Studio Setup"
+          href: r-studio-setup.html
+        - text: "Presentation Materials"
+          href: monitoring-economies-through-space.html
+        - text: "Spatial BlackMarble Training"
+          href: trainings/spatial-blackmarble-training.html
   #       - ntl-diagnostic-code/ntl-diagnostics.qmd
 
 format:
@@ -43,5 +62,7 @@ format:
     html-math-method: katex
     
 execute:
-  freeze: auto
-  cache: true
+  freeze: auto  # Use frozen results when available
+  eval: true    # Set to false to skip all execution
+  echo: true    # Show code by default
+  cache: true   # Enable caching globally
