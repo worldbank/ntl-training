@@ -2110,7 +2110,7 @@ ntl_clean_df %>%
 
 ### Part 3: Diff-in-Diff Regression
 
-Estimate a difference-in-difference regression that estimates the impact of the M-2 road upgrade on nighttime lights, relative to the N-5 road. In short, the diff-in-diff compares changes in NTL in locations near the M-2 before/after upgrades with changes in NTL in locations near the N-5. Specifically, estimate the following regression:
+Estimate a [difference-in-difference](https://dimewiki.worldbank.org/Difference-in-Differences) regression that estimates the impact of the M-2 road upgrade on nighttime lights, relative to the N-5 road. In short, the diff-in-diff compares changes in NTL in locations near the M-2 before/after upgrades with changes in NTL in locations near the N-5. Specifically, estimate the following regression:
 
 \[
 Y_{it} = \alpha_i + \gamma_t + 
