@@ -1,0 +1,32 @@
+name: Cleanup Preview Deployments
+
+on:
+  delete:
+  schedule:
+    # Run weekly to clean up old previews
+    - cron: '0 0 * * 0'
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'delete' && github.event.ref_type == 'branch'
+    
+    permissions:
+      contents: write
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          
+      - name: Remove preview directory for deleted branch
+        run: |
+          BRANCH_NAME="${{ github.event.ref }}"
+          if [ -d "preview/$BRANCH_NAME" ]; then
+            rm -rf "preview/$BRANCH_NAME"
+            git config user.name github-actions
+            git config user.email github-actions@github.com
+            git add .
+            git commit -m "Remove preview for deleted branch: $BRANCH_NAME" || exit 0
+            git push
+          fi

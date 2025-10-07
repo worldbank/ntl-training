@@ -1,0 +1,97 @@
+name: Preview Branch (GitHub Pages)
+
+on:
+  push:
+    branches-ignore: 
+      - main
+      - gh-pages
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write
+      pages: read
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Quarto
+        uses: quarto-dev/quarto-actions/setup@v2
+        with:
+          tinytex: true 
+      
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+          
+      - name: Install R packages
+        uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          packages: |
+            any::knitr
+            any::rmarkdown
+            any::downlit
+            any::xml2
+            any::sf
+            any::terra
+            any::leaflet
+            any::leaflet.providers
+            any::ggplot2
+            any::dplyr
+            any::tidyverse
+            any::lubridate
+            any::here
+            any::usethis
+            any::blackmarbler
+            any::osmdata
+            any::geodata
+            any::exactextractr
+            any::readr
+            any::readxl
+            any::janitor
+            any::scales
+            any::viridis
+            any::RColorBrewer
+            any::DT
+            any::plotly
+            any::htmlwidgets
+            any::ggpubr
+            any::tidyterra
+            any::gtools
+            any::WDI
+            any::kableExtra
+            any::countrycode
+            any::haven
+            any::ggnewscale
+            any::h3jsr
+            any::fixest
+          cache-version: 2
+
+      - name: Render Quarto Project
+        uses: quarto-dev/quarto-actions/render@v2
+
+      - name: Deploy to branch-specific GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs
+          destination_dir: preview/${{ github.ref_name }}
+          keep_files: true
+
+      - name: Comment PR with preview link
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branch = context.payload.pull_request.head.ref;
+            const previewUrl = `https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/preview/${branch}/`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `📖 **Preview deployment ready!**\n\n🔗 Preview URL: ${previewUrl}\n\n*This preview will be updated automatically when you push new commits to this branch.*`
+            });

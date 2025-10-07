@@ -1,14 +1,11 @@
 ---
 title: "Using BlackMarble Nighttime Lights Data in R"
 output:
-  html_document:
-    toc: true
-    toc_depth: 3
-    toc_float: true
-    code_folding: show
-    number_sections: true
-    theme: cosmo
-description: Provides an introduction to spatial analysis in R and for working with BlackMarble nighttime lights data.
+  learnr::tutorial:
+    progressive: true
+    allow_skip: true
+runtime: shiny_prerendered
+description: Provides an introdiction to spatial analysis in R and for working with BlackMarble nighttime lights data.
 ---
 
 ```{r setup, include=FALSE}

@@ -45,6 +45,31 @@ The course assumes familiarity with R or Python. For an introduction to these pr
 
 # Training Content
 
+## Interactive Tutorial
+
+📚 **NEW: Interactive Shiny Tutorial** - Learn BlackMarble data analysis through hands-on exercises!
+
+To run the interactive tutorial:
+
+1. **Install required packages**:
+   ```r
+   source("install_packages.R")
+   ```
+
+2. **Launch the tutorial**:
+   ```r
+   source("launch_tutorial.R")
+   ```
+
+The interactive tutorial includes:
+- Progressive learning modules
+- Interactive code exercises
+- Quizzes to test understanding
+- Real-time feedback
+- Hands-on BlackMarble data analysis
+
+## Static Training Materials
+
 1. __Introduction to Spatial Analysis__ [[R](https://html-preview.github.io/?url=https://raw.githubusercontent.com/ramarty/ntl-training/refs/heads/main/trainings/01_spatial_analysis_review.html) | _Python coming later!_]: Overview of working with vector and raster spatial data in R.
 2. __Nighttime Lights for Economic Analysis__ [[PPT](https://worldbankgroup.sharepoint.com.mcas.ms/:p:/r/teams/DevelopmentDataPartnershipCommunity-WBGroup/_layouts/15/Doc.aspx?sourcedoc=%7BA106862B-3498-44F1-A197-6275A2EC53AC%7D&file=NightTime%20Lights%20Course%20-%20Day%201.pptx&action=edit&mobileredirect=true)]: Overview of nighttime light datasets and use of nighttime lights for economic and social science analysis.
 3. __Nighttime Lights Analysis in R__ [[R](https://html-preview.github.io/?url=https://raw.githubusercontent.com/ramarty/ntl-training/refs/heads/main/trainings/03_intro_blackmarbler.html) | _Python coming later!_]: Provides of overview of querying and analyzing nighttime lights data in R.
