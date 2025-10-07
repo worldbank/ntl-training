@@ -2110,7 +2110,7 @@ ntl_clean_df %>%
 
 ### Part 3: Diff-in-Diff Regression
 
-Estimate a difference-in-difference regression that estimates the impact of the M-2 road upgrade on nighttime lights, relative to the N-5 road. Specifically, estimate the following regression:
+Estimate a [difference-in-difference](https://dimewiki.worldbank.org/Difference-in-Differences) regression that estimates the impact of the M-2 road upgrade on nighttime lights, relative to the N-5 road. In short, the diff-in-diff compares changes in NTL in locations near the M-2 before/after upgrades with changes in NTL in locations near the N-5. Specifically, estimate the following regression:
 
 \[
 Y_{it} = \alpha_i + \gamma_t + 
@@ -2120,6 +2120,15 @@ Y_{it} = \alpha_i + \gamma_t +
 \]
 
 The unit of analysis should be h3 hexagons (resolution 5, edge length of about 10km).
+
+In R, this would look something like:
+
+```r
+lm_ntl_sum  <- feols(ntl_sum ~ factor(year) * near_m2 | h3 + year, 
+                     cluster = ~GID_3, data = ntl_clean_df)
+```
+
+where `year` is a factor variable for year, where the reference year is the year before upgrades. `near_m2` is a binary variable that indicates if the unit is near the m2. We include fixed effects for each `h3` cell and for each year, and we cluster at the `ADM3` level.
 
 Estimate regressions with the following outcome variables:
 
