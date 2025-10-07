@@ -2123,7 +2123,10 @@ The unit of analysis should be h3 hexagons (resolution 5, edge length of about 1
 
 In R, this would look something like:
 
-`lm_ntl_sum  <- feols(ntl_sum ~ factor(year) * near_m2 | h3 + year, cluster = ~GID_3, data = ntl_clean_df)`
+```r
+lm_ntl_sum  <- feols(ntl_sum ~ factor(year) * near_m2 | h3 + year, 
+                     cluster = ~GID_3, data = ntl_clean_df)
+```
 
 where `year` is a factor variable for year, where the reference year is the year before upgrades. `near_m2` is a binary variable that indicates if the unit is near the m2. We include fixed effects for each `h3` cell and for each year, and we cluster at the `ADM3` level.
 
