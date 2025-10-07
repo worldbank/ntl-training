@@ -1169,8 +1169,8 @@ Decisions to make
 
 * What buffer should you use for excluding gas flaring locations?
 * How to include/exclude gas flaring locations? 
-- Approach 1: Mask NTL raster (ie, use `mask()` and `mask(inverse = T)`)
-- Approach 2: Create geometries including/excluding gas flaring (ie, use `st_intersection()` and `st_difference()`)
+  - Approach 1: Mask NTL raster (ie, use `mask()` and `mask(inverse = T)`)
+  - Approach 2: Create geometries including/excluding gas flaring (ie, use `st_intersection()` and `st_difference()`)
 
 ```{r nga_gf_1, exercise = T, exercise.lines=30}
 #### Load data
