@@ -74,6 +74,15 @@ jobs:
       - name: Render Quarto Project
         uses: quarto-dev/quarto-actions/render@v2
 
+      - name: Verify docs directory
+        run: |
+          echo "Checking docs directory..."
+          ls -la docs/
+          echo "Docs directory size:"
+          du -sh docs/
+          echo "Sample files:"
+          find docs/ -name "*.html" | head -5
+
       - name: Deploy to Netlify
         uses: nwtgck/actions-netlify@v3.0
         with:
@@ -84,10 +93,11 @@ jobs:
           enable-pull-request-comment: false
           enable-commit-comment: true
           overwrites-pull-request-comment: true
+          alias: deploy-preview-${{ github.ref_name }}
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
-        timeout-minutes: 5
+        timeout-minutes: 10
 
       - name: Output preview info
         run: |
