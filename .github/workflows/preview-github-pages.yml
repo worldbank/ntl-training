@@ -74,17 +74,24 @@ jobs:
       - name: Render Quarto Project
         uses: quarto-dev/quarto-actions/render@v2
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+      - name: Deploy to Netlify
+        uses: nwtgck/actions-netlify@v3.0
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs
-          publish_branch: gh-pages
-          destination_dir: preview/${{ github.ref_name }}
-          keep_files: true
+          publish-dir: './docs'
+          production-branch: main
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          deploy-message: "Preview for ${{ github.ref_name }}: ${{ github.event.head_commit.message }}"
+          enable-pull-request-comment: false
+          enable-commit-comment: true
+          overwrites-pull-request-comment: true
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        timeout-minutes: 5
 
-      - name: Output preview URL
+      - name: Output preview info
         run: |
           echo "🚀 Preview deployed successfully!"
-          echo "📖 Preview URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/preview/${{ github.ref_name }}/"
-          echo "::notice title=Preview Deployed::Preview available at https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/preview/${{ github.ref_name }}/"
+          echo "📖 Preview will be available via Netlify deploy preview"
+          echo "🔗 Check the commit comments or PR comments for the preview URL"
+          echo "::notice title=Preview Deployed::Netlify deploy preview created for branch ${{ github.ref_name }}"

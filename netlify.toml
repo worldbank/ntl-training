@@ -1,0 +1,7 @@
+[build]
+  # Skip build command since we're building in GitHub Actions
+  command = "echo 'Site already built by GitHub Actions'"
+  publish = "docs"
+
+[build.environment]
+  # No build environment needed since we're not building here
