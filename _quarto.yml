@@ -3,6 +3,10 @@ project:
   output-dir: docs
   render:
     - README.md
+    - code-setup/rstudio-setup.md
+    - code-setup/python-setup.md
+    - spatial-blackmarble-training/r-training/r-blackmarble-training.rmd
+    - spatial-blackmarble-training/python-training/python-blackmarble-training.md
 
 website:
   title: "Nighttime Lights for Economic Analysis"
@@ -15,20 +19,42 @@ website:
     left:
       - href: README.md
         text: Home
-      # - href: trainings/
-      #   text: Training Materials
-      # - href: ntl-diagnostic-code/
-      #   text: Country Diagnostics
+      - text: "Code Setup"
+        menu:
+          - href: code-setup/rstudio-setup.html
+            text: "RStudio Setup"
+          - href: code-setup/python-setup.html
+            text: "Python Setup"
+      - text: "Spatial BlackMarble Training"
+        menu:
+          - href: spatial-blackmarble-training/r-training/r-blackmarble-training.html
+            text: "R Training"
+          - href: spatial-blackmarble-training/python-training/python-blackmarble-training.html
+            text: "Python Training"
+    right:
+      - icon: github
+        href: https://github.com/worldbank/ntl-training
+        text: GitHub
     
-  # sidebar:
-  #   - title: "Using BlackMarbleR"
-  #     contents:
-  #       - trainings/01_spatial_analysis_review.qmd
-  #       - trainings/03_intro_blackmarbler.qmd
-  #       - trainings/03_spatial_analysis_blackmarbler.qmd
-  #   - title: "Diagnostics"
-  #     contents:
-  #       - ntl-diagnostic-code/ntl-diagnostics.qmd
+  sidebar:
+    - title: "Home"
+      contents:
+        - text: "Welcome"
+          href: README.md
+    
+    - title: "Code Setup"
+      contents:
+        - text: "RStudio Setup"
+          href: code-setup/rstudio-setup.html
+        - text: "Python Setup"
+          href: code-setup/python-setup.html
+    
+    - title: "Spatial BlackMarble Training"
+      contents:
+        - text: "R Training"
+          href: spatial-blackmarble-training/r-training/r-blackmarble-training.html
+        - text: "Python Training"
+          href: spatial-blackmarble-training/python-training/python-blackmarble-training.html
 
 format:
   html:
@@ -43,5 +69,7 @@ format:
     html-math-method: katex
     
 execute:
-  freeze: auto
-  cache: true
+  freeze: auto  # Use frozen results when available
+  eval: true    # Set to false to skip all execution
+  echo: true    # Show code by default
+  cache: true   # Enable caching globally

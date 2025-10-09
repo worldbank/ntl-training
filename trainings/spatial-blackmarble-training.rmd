@@ -9,7 +9,7 @@ description: Provides an introdiction to spatial analysis in R and for working w
 ---
 
 ```{r setup, include=FALSE}
-library(learnr)
+# library(learnr)  # Commented out for static rendering
 library(tidyverse)
 library(sf)
 library(terra)
@@ -24,18 +24,18 @@ library(fixest)
 library(janitor)
 library(here)
 
-tutorial_options(
-  exercise.timelimit = 60,
-  # A simple checker function that just returns the message in the check chunk
-  exercise.checker = function(check_code, ...) {
-    list(
-      message = eval(parse(text = check_code)),
-      correct = logical(0),
-      type = "info",
-      location = "append"
-    )
-  }
-)
+# tutorial_options(  # Commented out for static rendering
+#   exercise.timelimit = 60,
+#   # A simple checker function that just returns the message in the check chunk
+#   exercise.checker = function(check_code, ...) {
+#     list(
+#       message = eval(parse(text = check_code)),
+#       correct = logical(0),
+#       type = "info",
+#       location = "append"
+#     )
+#   }
+# )
 knitr::opts_chunk$set(error = TRUE)
 ```
 
@@ -619,7 +619,9 @@ __Exercise: Remove gas flaring locations from `adm0_sf`__
 * Make a map of `adm0_sf` without gas flares to see output
 
 ```{r st_difference_ex, exercise = T, exercise.lines = 25}
+#| eval: false
 #### Load data
+
 adm0_sf <- read_sf(here("data", "gadm", "nga_adm0.geojson"), quiet = T)
 gf_df   <- read_csv(here("data", "gas_flaring", "finaldata", "gas_flaring_nga.csv"),
                     show_col_types = F)
@@ -998,7 +1000,7 @@ Below are select optional arguments; for all arguments, see documentation [here]
 __bm_raster()__
 
 ```{r usage1, exercise = T}
-
+#| eval: false
 # Load ADM
 adm0_sf <- read_sf(here("data", "gadm", "nga_adm0.geojson"), quiet = T)
 
@@ -1045,6 +1047,7 @@ __Exercise: Use `bm_raster` to extract a raster of the quality of NTL for Januar
 * What do the different quality numbers mean?
 
 ```{r usage3, exercise = T}
+#| eval: false
 
 # Load ADM
 adm0_sf <- read_sf(here("data", "gadm", "nga_adm0.geojson"), quiet = T)
@@ -1054,10 +1057,10 @@ ntl_r <- bm_raster(
   roi_sf = adm0_sf,
   product_id = "VNP46A3",
   date = "2024-01-01",
-  bearer = "dont-change",
+  bearer = bearer,
   output_location_type = "file",
   variable = "", # SET THIS TO SOMETHING !!!!!
-  file_dir = file.path(here("data", "ntl_blackmarble", "nigeria"))
+  file_dir = file.path(here("data", "ntl_blackmarble", "nigeria")),
 )
 
 # Plot
@@ -1070,6 +1073,7 @@ ntl_r <- bm_raster(
 Click to see solution
 </summary>
 ```{r}
+#| eval: false
 
 # Load ADM
 adm0_sf <- read_sf(here("data", "gadm", "nga_adm0.geojson"), quiet = T)
@@ -1173,6 +1177,8 @@ Decisions to make
   - Approach 2: Create geometries including/excluding gas flaring (ie, use `st_intersection()` and `st_difference()`)
 
 ```{r nga_gf_1, exercise = T, exercise.lines=30}
+#| eval: false
+
 #### Load data
 nga0_sf <- read_sf(here("data", "gadm", "nga_adm0.geojson"))
 gf_df   <- read_csv(here("data", "gas_flaring", "finaldata", "gas_flaring_nga.csv"),
@@ -1209,6 +1215,7 @@ Click to see solution (approach 1: masking raster)
 </summary>
 
 ```{r}
+#| eval: false
 #### Load data
 nga0_sf <- read_sf(here("data", "gadm", "nga_adm0.geojson"))
 gf_df   <- read_csv(here("data", "gas_flaring", "finaldata", "gas_flaring_nga.csv"),
@@ -1339,6 +1346,7 @@ Calculate the sum of NTL around each gas flaring location in 2024. Using this da
 2. Map gas flaring locations, coloring each location by the sum of NTL
 
 ```{r nga_gf_2, exercise = T, exercise.lines=30}
+#| eval: false
 #### Load data
 nga0_sf <- read_sf(here("data", "gadm", "nga_adm0.geojson"))
 gf_df   <- read_csv(here("data", "gas_flaring", "finaldata", "gas_flaring_nga.csv"),
@@ -1373,6 +1381,7 @@ Click to see solution
 </summary>
 
 ```{r}
+#| eval: false
 #### Load data
 nga0_sf <- read_sf(here("data", "gadm", "nga_adm0.geojson"))
 gf_df   <- read_csv(here("data", "gas_flaring", "finaldata", "gas_flaring_nga.csv"),
@@ -1434,6 +1443,7 @@ On September 20, 2017, [Hurricane Maria](https://en.wikipedia.org/wiki/Hurricane
 Make a figure that shows total monthly nighttime lights in Puerto Rico from January 2017 to December 2018.
 
 ```{r pr_monthly, exercise = T, exercise.lines=30}
+#| eval: false
 
 pr_sf <- read_sf(here("data", "gadm", "pri_adm0.geojson"))
 
@@ -1454,6 +1464,7 @@ ntl_df <- bm_extract(
 Click to see solution
 </summary>
 ```{r}
+#| eval: false
 
 pr_sf <- read_sf(here("data", "gadm", "pri_adm0.geojson"))
 
@@ -1490,6 +1501,7 @@ ntl_df %>%
 Create a map that shows the percent change in nighttime lights at the ADM1 level, comparing September 2017 and October 2017.
 
 ```{r damage_adm, exercise = T, exercise.lines=30}
+#| eval: false
 
 ## Load Puerto Rico ADM1 polygon
 pr_sf <- read_sf(here("data", "puero_rico_adm1.geojson"))
@@ -1514,6 +1526,7 @@ Click to see solution
 </summary>
 
 ```{r}
+#| eval: false
 pr_sf <- read_sf(here("data", "gadm", "pri_adm1.geojson"))
 
 ntl_df <- bm_extract(
@@ -1578,6 +1591,7 @@ Click to see solution
 </summary>
 
 ```{r}
+#| eval: false
 pr_sf <- read_sf(here("data", "gadm", "pri_adm0.geojson"))
 
 ntl_r <- bm_raster(
@@ -1647,6 +1661,7 @@ Run the following code, which plots:
 What do the maps indicate about our ability to use NTL to understand the immediate impacts of Hurricane damage?
 
 ```{r pr_quality_check, exercise = T, exercise.lines=30}
+#| eval: false
 pr_0_sf <- read_sf(here("data", "gadm", "pri_adm0.geojson"))
 
 ntl_0920_r <- bm_raster(
@@ -1725,6 +1740,7 @@ ggplot() +
 Make a figure showing the proportion of NTL pixels that are `NA` across Puerto Rico daily two weeks before and after the Hurricane hit. Use the `DNB_BRDF-Corrected_NTL` variable.
 
 ```{r prop_na, exercise = T, exercise.lines=30}
+#| eval: false
 #### Load data
 pr_sf <- read_sf(here("data", "gadm", "pri_adm0.geojson"))
 
@@ -1750,6 +1766,7 @@ ntl_df <- bm_extract(
 Click to see solution
 </summary>
 ```{r}
+#| eval: false
 #### Load data
 pr_0_sf <- read_sf(here("data", "gadm", "pri_adm0.geojson"))
 
@@ -1785,6 +1802,7 @@ ntl_df %>%
 Click to see solution: More manual method, using rasters
 </summary>
 ```{r}
+#| eval: false
 #### Load data
 pr_0_sf <- read_sf(here("data", "gadm", "pri_adm0.geojson"))
 
@@ -1847,6 +1865,7 @@ We see there's quality issues with `DNB_BRDF-Corrected_NTL`. Let's see trends in
 2. Average days of last retrieval for filling gap in NTL (`Latest_High_Quality_Retrieval`)
 
 ```{r daily_ntl, exercise = T, exercise.lines=40}
+#| eval: false
 #### Load data
 pr_sf <- read_sf(here("data", "gadm", "pri_adm0.geojson"))
 
@@ -1887,6 +1906,7 @@ latest_df <- bm_extract(
 Click to see solution
 </summary>
 ```{r}
+#| eval: false
 #### Load data
 pr_sf <- read_sf(here("data", "gadm", "pri_adm0.geojson"))
 
@@ -1953,6 +1973,7 @@ Make a map that includes:
 2. Roads, with 10km buffer
 
 ```{r pak_map, exercise = T, exercise.lines=30}
+#| eval: false
 #### Load data
 roads_sf <- read_sf(here("data", "osm", "roads_pak_treat_n5_m2.geojson"))
 
@@ -1976,6 +1997,7 @@ ntl_r <- bm_raster(
 Click to see solution
 </summary>
 ```{r}
+#| eval: false
 #### Load data
 roads_sf <- read_sf(here("data", "osm", "roads_pak_treat_n5_m2.geojson"))
 
@@ -2015,6 +2037,7 @@ Create a figure that shows annual trends in NTL within 10km of the M-2 and N-5, 
 2. Excludes lights within 5km of Islamabad and Lahore
 
 ```{r pak_trends, exercise = T, exercise.lines=30}
+#| eval: false
 #### Load data
 roads_sf <- read_sf(here("data", "osm", "roads_pak_treat_n5_m2.geojson"))
 cities_df <- read_csv(here("data", "cities", "pak_cities.csv"),
@@ -2049,6 +2072,7 @@ ntl_r <- bm_raster(
 Click to see solution
 </summary>
 ```{r}
+#| eval: false
 #### Load data
 roads_sf <- read_sf(here("data", "osm", "roads_pak_treat_n5_m2.geojson"))
 cities_df <- read_csv(here("data", "cities", "pak_cities.csv"),
@@ -2143,6 +2167,7 @@ Hexagons should be:
 3. More than 5km from Islamabad and Lahore
 
 ```{r pak_reg, exercise = T, exercise.lines=50}
+#| eval: false
 #### Load data
 pak_3_sf <- read_sf(here("data", "gadm", "pak_adm3.geojson"))
 roads_sf <- read_sf(here("data", "osm", "roads_pak_treat_n5_m2.geojson"))
@@ -2194,6 +2219,7 @@ ntl_r <- bm_raster(
 Click to see solution
 </summary>
 ```{r}
+#| eval: false
 #### Load data
 pak_3_sf <- read_sf(here("data", "gadm", "pak_adm3.geojson"))
 roads_sf <- read_sf(here("data", "osm", "roads_pak_treat_n5_m2.geojson"))

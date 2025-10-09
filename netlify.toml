@@ -1,0 +1,18 @@
+[build]
+  # Skip all builds - site is built by GitHub Actions
+  ignore = "exit 0"
+  
+# Disable automatic Git deploys since we're using GitHub Actions API
+[build.processing]
+  skip_processing = false
+
+[build.processing.css]
+  bundle = true
+  minify = true
+
+[build.processing.js]
+  bundle = true
+  minify = true
+
+[build.processing.html]
+  pretty_urls = true
