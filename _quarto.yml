@@ -63,7 +63,7 @@ format:
     toc: true
     toc-depth: 3
     number-sections: true
-    code-fold: true
+    code-fold: false
     code-tools: true
     embed-resources: false
     html-math-method: katex
