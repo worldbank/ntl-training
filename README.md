@@ -29,6 +29,7 @@ In this session, participants will learn about:
 The target audience for Day 1 includes TTLs, economists and senior specialists in economic monitoring teams, disaster needs assessment teams and urban planning teams.
 
 ## Day 2: Hands-On Tutorial on Analyzing Nightlights with BlackMarbleR.
+**Hands On Session Link**: [Training Recording](https://worldbankgroup-my.sharepoint.com/:v:/g/personal/ltsegaye_worldbank_org/ETvpjaz3HhJFingCe7T2SQoBz6JmALghWIY4pdKBG-kD-Q?nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJTdHJlYW1XZWJBcHAiLCJyZWZlcnJhbFZpZXciOiJTaGFyZURpYWxvZy1MaW5rIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXcifX0%3D&e=HSxhmk)
 
 This session will provide hands-on training on querying and analyzing nighttime lights data using VIIRS NTL data from BlackMarble. Participants will learn to use BlackMarbleR to extract, process and analyse NTL data. In this session participants will learn to:
 

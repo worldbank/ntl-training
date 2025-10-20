@@ -12,6 +12,8 @@ organization: "World Bank"
 
 > **Presentation Conducted on 1st October 2025**: [Access the original PowerPoint presentation](https://worldbankgroup.sharepoint.com.mcas.ms/:p:/r/teams/DevelopmentDataPartnershipCommunity-WBGroup/_layouts/15/Doc.aspx?sourcedoc=%7BCB01FC45-80A0-41FD-A2F2-25B5EAE0FF49%7D&file=Monitoring%20Economies%20Through%20Space%20Using%20Nighttime%20Lights.pptx&action=edit&mobileredirect=true)
 
+**Hands On Session Link**: [Teams Recording](https://worldbankgroup-my.sharepoint.com/:v:/g/personal/ltsegaye_worldbank_org/ETvpjaz3HhJFingCe7T2SQoBz6JmALghWIY4pdKBG-kD-Q?nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJTdHJlYW1XZWJBcHAiLCJyZWZlcnJhbFZpZXciOiJTaGFyZURpYWxvZy1MaW5rIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXcifX0%3D&e=HSxhmk)
+
 ## Outline
 
 - **Data Sources**: Evolution and Access
