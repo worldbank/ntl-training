@@ -3,6 +3,7 @@ project:
   output-dir: docs
   render:
     - README.md
+    - monitoring-economies-through-space.md
     - code-setup/rstudio-setup.md
     - code-setup/python-setup.md
     - spatial-blackmarble-training/r-training/r-blackmarble-training.rmd
@@ -19,6 +20,8 @@ website:
     left:
       - href: README.md
         text: Home
+      - href: monitoring-economies-through-space.html
+        text: "Nighttime Lights Theory"
       - text: "Code Setup"
         menu:
           - href: code-setup/rstudio-setup.html
@@ -41,6 +44,11 @@ website:
       contents:
         - text: "Welcome"
           href: README.md
+    
+    - title: "Nighttime Lights Theory"
+      contents:
+        - text: "Theory & Background"
+          href: monitoring-economies-through-space.html
     
     - title: "Code Setup"
       contents:
