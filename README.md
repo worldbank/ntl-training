@@ -96,4 +96,9 @@ _World Bank Data Partnership examples using nighttime lights_
 * [Syria Economic Monitor](https://datapartnership.org/syria-economic-monitor/notebooks/ntl-analysis/README.html)
 * [Lebanon Economic Monitor](https://datapartnership.org/lebanon-economic-monitor/notebooks/ntl-analysis/README.html)
 
+## License
+
+This project is licensed under the MIT License together with the [World Bank IGO Rider](https://github.com/worldbank/.github/blob/main/WB-IGO-RIDER.md). The Rider is purely procedural: it reserves all privileges and immunities enjoyed by the World Bank, without adding restrictions to the MIT permissions. Please review both files before using, distributing or contributing.
+
+See [LICENSE](LICENSE) for full details.
 
