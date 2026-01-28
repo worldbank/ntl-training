@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "Country borders or names do not necessarily reflect the World Bank Group’s official position. All maps are for illustrative purposes and do not imply the expression of any opinion on the part of the World Bank, concerning the legal status of any country or territory or concerning the delimitation of frontiers or boundaries."
+title: "Monitoring Economies from Space Using Nighttime Lights"
+authors:
+  - affiliation: World Bank
+    family-names: Marty
+    given-names: Robert
+  - affiliation: World Bank
+    family-names: Sarva
+    given-names: Sahiti
+keywords:
+  - Nighttime Lights
+  - Economic Analysis
+  - Remote Sensing
+  - BlackMarble
+  - Training Materials
+repository-code: https://github.com/worldbank/ntl-training
+url: https://worldbank.github.io/ntl-training
