@@ -102,3 +102,6 @@ This project is licensed under the MIT License together with the [World Bank IGO
 
 See [LICENSE](LICENSE) for full details.
 
+## Code of Conduct
+
+This project maintains a [Code of Conduct](docs/CODE_OF_CONDUCT.md) to ensure an inclusive and respectful environment for everyone. Please adhere to it in all interactions within our community.
