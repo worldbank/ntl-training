@@ -39,7 +39,7 @@ Python is the programming language, and you need to install it first before any 
 1. Go to the official Python website: [https://www.python.org/](https://www.python.org/)
 2. Click on "Downloads"
 3. The website should automatically detect your operating system
-4. Download Python 3.8 or later (recommended: latest stable version)
+4. Download Python 3.13
 5. Select your operating system:
    - **Windows**: Click "Download Python 3.x" → Run the installer → **Important: Check "Add Python to PATH"**
    - **Mac**: Click "Download Python 3.x" → Download the .pkg file → Run installer

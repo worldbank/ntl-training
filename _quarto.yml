@@ -6,6 +6,7 @@ project:
     - monitoring-economies-through-space.md
     - code-setup/rstudio-setup.md
     - code-setup/python-setup.md
+    - code-setup/codespaces-setup.md
     - spatial-blackmarble-training/r-training/r-blackmarble-training.rmd
     - spatial-blackmarble-training/python-training/python-blackmarble-training.md
 
@@ -28,6 +29,8 @@ website:
             text: "RStudio Setup"
           - href: code-setup/python-setup.html
             text: "Python Setup"
+          - href: code-setup/codespaces-setup.html
+            text: "Codespaces Setup"
       - text: "Spatial BlackMarble Training"
         menu:
           - href: spatial-blackmarble-training/r-training/r-blackmarble-training.html
@@ -56,6 +59,8 @@ website:
           href: code-setup/rstudio-setup.html
         - text: "Python Setup"
           href: code-setup/python-setup.html
+        - text: "Codespaces Setup"
+          href: code-setup/codespaces-setup.html
     
     - title: "Spatial BlackMarble Training"
       contents:
