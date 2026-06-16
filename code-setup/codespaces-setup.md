@@ -1,41 +1,42 @@
 # Steps to use GitHub Codespaces
 
-GitHub Codespaces lets you run the training materials in a browser-based development environment. This is the easiest setup option if you do not want to install R, Python, geospatial libraries, and course dependencies on your computer.
+GitHub Codespaces lets you run the training materials in a browser-based development environment.
 
-## Step 1: Create a GitHub Account
+## Step 1: Create GitHub
 
 Create a free GitHub account at [github.com](https://github.com/) or sign in to your existing account.
 
-## Step 2: Open the training repository 
+## Step 2: Open training repository
 
 Open the [ntl-training repository](https://github.com/worldbank/ntl-training).
 
 ![](../trainings/images/codepsaces.png)
 
-## Step 3: Open the Codespaces menu
+## Step 3: Open Codespaces menu and create a codespace
 
-On the repository page, click the green **Code** button. In the menu that opens, select the **Codespaces** tab.
+On the repository page, click the green **Code** button. In the menu that opens, select the **Codespaces** tab, then click **Create codespace on main**.
 
 ![](../trainings/images/codespaces_2.png)
 
-## Step 4: Create a new codespace
+## Step 4: Open your codespace
 
-Click **Create codespace on main**. GitHub will start building a cloud development environment for the training repository.
+GitHub will open the codespace in a browser-based VS Code window. Wait up to 2 minutes for this to complete setup.
 
 ![](../trainings/images/codespaces_3.png)
-
-## Step 5: Select the notebook kernel
-
-When you open a notebook, VS Code may ask you to select a kernel before you can run code cells. Click **Select Kernel** in the upper-right corner of the notebook, then choose the available Python or R kernel for the exercise you are working on.
-
 ![](../trainings/images/codespaces_4.png)
 
-## Step 6: Start working
+## Step 5: Open a notebook
 
-Use the file explorer on the left to open the training files. Once the correct kernel is selected, you can run notebooks, edit files, and use the terminal inside Codespaces.
+Use the file explorer on the left to open the notebook you want to run.
 
 ![](../trainings/images/codespaces_5.png)
 
-## Notes
+## Step 6: Select kernel
 
-Codespaces may take a few minutes to start the first time. If GitHub asks you to choose machine options, the default option is usually sufficient for the training exercises.
+Click **Select Kernel** in the upper-right corner of the notebook, then choose the available Python kernel.
+
+![](../trainings/images/codespaces_6.png)
+
+## Step 7: Run!
+
+Run the notebook cells from top to bottom.
