@@ -53,8 +53,4 @@ Below are select optional arguments; for all arguments, see documentation [here]
 
 ### Usage and Exercises
 
-The usage examples and exercises are available as notebooks:
-
-* [usage.ipynb](usage.ipynb)
-* [preliminary_exercises.ipynb](preliminary_exercises.ipynb)
-* [exercise_1.ipynb](exercise_1.ipynb)
+The usage examples and exercises are available as notebooks in the same folder. 

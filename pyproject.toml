@@ -1,0 +1,27 @@
+[project]
+name = "ntl-training"
+version = "0.1.0"
+description = "Python dependencies for the nighttime lights training notebooks."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "blackmarblepy",
+    "exactextract",
+    "folium",
+    "geopandas",
+    "ipykernel",
+    "jupyter",
+    "mapclassify",
+    "matplotlib",
+    "numpy",
+    "openpyxl",
+    "pandas",
+    "pyreadr",
+    "python-dotenv",
+    "rasterstats",
+    "rioxarray",
+    "shapely",
+]
+
+[tool.uv]
+package = false
