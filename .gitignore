@@ -200,3 +200,6 @@ data/ntl_blackmarble/
 .config/ntl-training/secrets.env
 
 docs/spatial-blackmarble-training/r-training/images
+
+docs/
+docs/trainings/images/codespaces_2.png
