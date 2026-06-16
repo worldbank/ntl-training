@@ -2,7 +2,7 @@
 *.gpkg
 
 # Quarto
-docs/
+
 /.quarto/
 _site/
 .quarto
@@ -189,14 +189,14 @@ quarto-1.4.554/
 *_cache/
 *_files/
 
-# Built documentation (GitHub Actions creates this)
-docs/
+
 
 # Quarto working directory
 .quarto/
 
-
-
-.config/ntl-training/secrets
+/.config/ntl-training/secrets.env
 
 data/ntl_blackmarble/
+.config/ntl-training/secrets.env
+
+docs/spatial-blackmarble-training/r-training/images
