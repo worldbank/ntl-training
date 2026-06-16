@@ -1,0 +1,8 @@
+blackmarblepy 
+geopandas
+matplotlib
+numpy
+pandas
+python-dotenv
+rioxarray
+shapely
