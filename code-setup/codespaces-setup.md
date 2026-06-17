@@ -10,19 +10,18 @@ Create a free GitHub account at [github.com](https://github.com/) or sign in to 
 
 Open the [ntl-training repository](https://github.com/worldbank/ntl-training).
 
-![](../trainings/images/codepsaces.png)
+![](../trainings/images/codespaces_2.png)
 
 ## Step 3: Open Codespaces menu and create a codespace
 
 On the repository page, click the green **Code** button. In the menu that opens, select the **Codespaces** tab, then click **Create codespace on main**.
 
-![](../trainings/images/codespaces_2.png)
+![](../trainings/images/codespaces_3.png)
 
 ## Step 4: Open your codespace
 
 GitHub will open the codespace in a browser-based VS Code window. Wait up to 2 minutes for this to complete setup.
 
-![](../trainings/images/codespaces_3.png)
 ![](../trainings/images/codespaces_4.png)
 
 ## Step 5: Open a notebook
